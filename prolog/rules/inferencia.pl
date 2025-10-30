@@ -19,13 +19,27 @@
 :- use_module('../knowledge/sakila.pl').
 
 % ---------------------------------------------------------------------------
-% Stubs (rascunhos) das regras exportadas
-% Observação: estes stubs permitem carregar o módulo sem erros.
-% A implementação real será feita na Etapa 2.6.
+% Implementações das regras de consulta básicas
+% Observação: estas regras operam sobre os fatos expostos pelo módulo sakila_facts.
 % ---------------------------------------------------------------------------
 
-filmes_por_ator(_AtorId, _FilmeId) :- false.
+% filmes_por_ator(NomeAtor, TituloFilme)
+% Sucede se o ator com nome NomeAtor atuou no filme com título TituloFilme.
+filmes_por_ator(NomeAtor, TituloFilme) :-
+    sakila_facts:actor(ActorID, NomeAtor),
+    sakila_facts:acted_in(ActorID, FilmID),
+    sakila_facts:film(FilmID, TituloFilme, _, _, _).
 
-genero_do_filme(_FilmeId, _Genero) :- false.
+% genero_do_filme(TituloFilme, NomeGenero)
+% Sucede se o filme com título TituloFilme pertence ao gênero NomeGenero.
+genero_do_filme(TituloFilme, NomeGenero) :-
+    sakila_facts:film(FilmID, TituloFilme, _, _, _),
+    sakila_facts:film_category(FilmID, CategoryID),
+    sakila_facts:category(CategoryID, NomeGenero).
 
-filmes_por_genero(_Genero, _FilmeId) :- false.
+% filmes_por_genero(NomeGenero, TituloFilme)
+% Sucede se o gênero NomeGenero contém o filme com título TituloFilme.
+filmes_por_genero(NomeGenero, TituloFilme) :-
+    sakila_facts:category(CategoryID, NomeGenero),
+    sakila_facts:film_category(FilmID, CategoryID),
+    sakila_facts:film(FilmID, TituloFilme, _, _, _).
