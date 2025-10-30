@@ -12,7 +12,8 @@
 :- module(sakila_rules, [
     filmes_por_ator/2,
     genero_do_filme/2,
-    filmes_por_genero/2
+    filmes_por_genero/2,
+    recomendar_por_ator/2
 ]).
 
 % Importa o módulo de fatos pelo caminho relativo correto
@@ -43,3 +44,23 @@ filmes_por_genero(NomeGenero, TituloFilme) :-
     sakila_facts:category(CategoryID, NomeGenero),
     sakila_facts:film_category(FilmID, CategoryID),
     sakila_facts:film(FilmID, TituloFilme, _, _, _).
+
+% ---------------------------------------------------------------------------
+% Regra de recomendação baseada em gênero/ator
+% recomendar_por_ator(NomeAtor, FilmeRecomendado)
+% Sucede se FilmeRecomendado for diferente de um filme (FilmeOriginal)
+% que o ator NomeAtor estrelou, mas compartilha um gênero com FilmeOriginal,
+% e o ator NomeAtor não atuou em FilmeRecomendado.
+% ---------------------------------------------------------------------------
+
+recomendar_por_ator(NomeAtor, FilmeRecomendado) :-
+    % Encontra um filme original em que o ator atuou
+    filmes_por_ator(NomeAtor, FilmeOriginal),
+    % Determina o gênero do filme original
+    genero_do_filme(FilmeOriginal, Genero),
+    % Busca filmes do mesmo gênero
+    filmes_por_genero(Genero, FilmeRecomendado),
+    % Filtro: filme recomendado deve ser diferente do original
+    FilmeRecomendado \= FilmeOriginal,
+    % Filtro: ator não atuou no filme recomendado
+    \+ filmes_por_ator(NomeAtor, FilmeRecomendado).
