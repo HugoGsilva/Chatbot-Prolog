@@ -5,8 +5,8 @@ para confirmar que o servidor está rodando.
 
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
-from .schemas import Filme
-from .nlu import normalize_actor_name
+from .schemas import Filme, ContagemGenero
+from .nlu import normalize_actor_name, normalize_genre_name
 from .prolog_service import prolog_service
 
 
@@ -78,3 +78,20 @@ async def recomendar_filmes_por_ator(nome_ator: str):
 
     response_data = [{"titulo": r["FilmeRecomendado"]} for r in results]
     return response_data
+
+
+@app.get("/contar-filmes", response_model=ContagemGenero)
+async def contar_filmes_por_genero_e_ano(genero: str, ano: int):
+    """Conta filmes pelo gênero e ano de lançamento usando regra Prolog agregadora."""
+    normalized_genero = normalize_genre_name(genero)
+    query_string = f"sakila_rules:contar_filmes_por_genero_e_ano('{normalized_genero}', {ano}, Contagem)"
+    results = prolog_service.query(query_string)
+
+    if not results or "Contagem" not in results[0]:
+        raise HTTPException(
+            status_code=404,
+            detail="Não foi possível gerar a contagem para os parâmetros fornecidos",
+        )
+
+    contagem_result = results[0]["Contagem"]
+    return {"genero": normalized_genero, "ano": ano, "contagem": contagem_result}

@@ -9,3 +9,12 @@ def normalize_actor_name(name: str) -> str:
     remoção de acentos, trimming, e regras de padronização adicionais.
     """
     return name.upper()
+
+
+def normalize_genre_name(name: str) -> str:
+    """Normaliza o nome do gênero para o formato esperado pelo Prolog.
+
+    Estratégia: capitalizar a primeira letra e manter o restante minúsculo,
+    alinhando com valores como "Action", "Comedy", "Sci-Fi".
+    """
+    return name.capitalize()
