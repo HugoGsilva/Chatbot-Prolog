@@ -56,3 +56,25 @@ async def get_filmes_por_ator(nome_ator: str):
 
     response_data = [{"titulo": r["TituloFilme"]} for r in results]
     return response_data
+
+
+@app.get("/recomendar-por-ator/{nome_ator}", response_model=list[Filme])
+async def recomendar_filmes_por_ator(nome_ator: str):
+    """Recomenda filmes com base nos gêneros associados aos filmes de um ator.
+
+    Normaliza o nome do ator e consulta a regra Prolog
+    `sakila_rules:recomendar_por_ator/2`, retornando uma lista no formato
+    do schema `Filme`.
+    """
+    normalized_name = normalize_actor_name(nome_ator)
+    query_string = f"sakila_rules:recomendar_por_ator('{normalized_name}', FilmeRecomendado)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail="Não foi possível gerar recomendações (ator não encontrado ou sem recomendações disponíveis)",
+        )
+
+    response_data = [{"titulo": r["FilmeRecomendado"]} for r in results]
+    return response_data
