@@ -23,10 +23,10 @@ async def test_get_filmes_por_ator_endpoint(anyio_backend):
         # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
         assert resp.status_code == 200
 
-        data = resp.json()
-        assert isinstance(data, list)
-        assert len(data) > 0
-        assert data[0]["titulo"] is not None
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["titulo"] is not None
 
 
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
@@ -52,3 +52,28 @@ async def test_recomendar_filmes_endpoint(anyio_backend):
     assert isinstance(data, list)
     assert len(data) > 0
     assert data[0]["titulo"] is not None
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_contar_filmes_endpoint(anyio_backend):
+    """Contrato do endpoint de contagem de filmes por gênero e ano.
+
+    Espera status 200 e um objeto no formato do schema ContagemGenero.
+    Deverá falhar (404) até o endpoint ser implementado.
+    """
+
+    async with LifespanManager(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            params = {"genero": "Action", "ano": 2006}
+            resp = await client.get("/contar-filmes", params=params)
+
+    # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
+    assert resp.status_code == 200
+
+    data = resp.json()
+    assert isinstance(data, dict)
+    assert data["genero"] == "Action"
+    assert data["ano"] == 2006
+    assert data["contagem"] >= 0
