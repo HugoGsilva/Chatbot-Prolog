@@ -1,0 +1,111 @@
+# A propriedade 'version' foi removida conforme aviso de log (é obsoleta).
+
+services:
+  # 1. Serviço MySQL (Banco de Dados Sakila)
+  mysql:
+    image: mysql:8.0
+    container_name: sakila-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: "sakila"
+    # CORREÇÃO (Erro 1): Mapeia a porta 3307 do Host para a 3306 do Contêiner
+    # para evitar conflito com qualquer MySQL local rodando na 3306.
+    ports:
+      - "3307:3306"
+    healthcheck:
+      # O healthcheck original estava correto.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # CORREÇÃO (Erro 5): Adiciona o MySQL à mesma rede dos outros serviços.
+    networks:
+      - sakila-network
+
+  # 2. Serviço de Inicialização do Banco
+  # 2. Serviço de Inicialização do Banco
+  # 2. Serviço de Inicialização do Banco
+  db-init:
+    # CORREÇÃO: Usamos a imagem mysql:8.0.
+    # Ela já contém os clientes 'mysql' e 'mysqladmin' compatíveis.
+    image: mysql:8.0
+    container_name: sakila-db-init
+    depends_on:
+      mysql:
+        condition: service_healthy # Espera o healthcheck do mysql passar
+    volumes:
+      - ./db/init:/init:ro
+      
+    # CORREÇÃO: Sobrescrevemos o comando padrão da imagem (que seria
+    # iniciar um servidor) pelo nosso script de importação.
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL (using mysql:8.0 client)...';
+        
+        until mysqladmin --host=mysql --user=root --password=1234 ping --silent; do
+          echo '...still waiting for connection...';
+          sleep 2;
+        done;
+        
+        echo 'Importing schema...';
+        mysql -h mysql -u root -p1234 sakila < /init/sakila-schema.sql;
+        echo 'Importing data...';
+        mysql -h mysql -u root -p1234 sakila < /init/sakila-data.sql;
+        echo 'DB Init complete.';
+      "
+    networks:
+      - sakila-network
+
+  # 3. Serviço da Aplicação Python (App)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prologue-app
+    depends_on:
+      db-init:
+        condition: service_completed_successfully # Roda após o db-init
+    environment:
+      - SAKILA_CONFIG=/app/backend/config/config.ini
+      - SAKILA_OUTPUT=/app/prolog/knowledge/sakila_kb.pl
+      - SAKILA_ERROR_LOG=/app/integrity_errors.log
+    # CORREÇÃO (Erro 4): A porta 8000 só é necessária se a API (uvicorn) estiver rodando.
+    # Como o contexto original diz que o padrão é 'pytest', ela está comentada.
+    # ports:
+    #   - "8000:8000" # Descomente isto quando 'app/main.py' existir e o comando for 'uvicorn'
+      
+    # CORREÇÃO (Contexto): Monta o repositório inteiro (.), não apenas ./app.
+    # Isso é necessário para o pytest encontrar /tests e o script encontrar /backend.
+    volumes:
+      - .:/app
+      
+    # CORREÇÃO (Erro 4): Remove o 'command: uvicorn...'
+    # Seu contexto original diz que o Dockerfile define o CMD como ["pytest", "-q"].
+    # Ao remover o 'command' daqui, o Docker Compose usará o CMD padrão do Dockerfile.
+    # Isso resolve o 'ModuleNotFoundError: No module named 'app''.
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    
+    working_dir: /app
+    networks:
+      - sakila-network
+
+  # 4. Serviço Redis (presente nos requisitos)
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sakila-network
+
+# Definição da rede customizada
+networks:
+  sakila-network:
+    driver: bridge
+
+# Definição do volume persistente do MySQL
+volumes:
+  mysql_data:
+    driver: local

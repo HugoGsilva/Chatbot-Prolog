@@ -68,6 +68,7 @@ class DatabaseConnector:
         self.user = self.config.get("mysql", "user", fallback=None)
         self.password = self.config.get("mysql", "password", fallback=None)
         self.database = self.config.get("mysql", "database", fallback=None)
+        self.port = self.config.getint("mysql", "port", fallback=3306)
         for key, val in {
             "host": self.host,
             "user": self.user,
@@ -84,6 +85,7 @@ class DatabaseConnector:
         try:
             self._conn = mysql.connector.connect(
                 host=self.host,
+                port=self.port,
                 user=self.user,
                 password=self.password,
                 database=self.database,
@@ -133,6 +135,42 @@ class FactWriter:
             pass
 
 
+class ReferentialIntegrityChecker:
+    """Carrega e valida integridade referencial entre tabelas Sakila."""
+
+    def __init__(self) -> None:
+        self.valid_actor_ids = set()
+        self.valid_film_ids = set()
+        self.valid_category_ids = set()
+
+    def load_primary_keys(self, db_conn, table_name: str, pk_column: str) -> int:
+        """Carrega todos os IDs primários da tabela e popula o set correspondente.
+        Retorna a quantidade carregada.
+        """
+        query = f"SELECT {pk_column} FROM {table_name};"
+        ids = set()
+        with db_conn.cursor(dictionary=False) as cur:
+            cur.execute(query)
+            for row in cur:
+                # row é uma tupla de uma coluna
+                ids.add(int(row[0]))
+
+        if table_name == "actor":
+            self.valid_actor_ids = ids
+        elif table_name == "film":
+            self.valid_film_ids = ids
+        elif table_name == "category":
+            self.valid_category_ids = ids
+        # Retorna contagem carregada
+        return len(ids)
+
+    def validate_acted_in(self, actor_id: int, film_id: int) -> bool:
+        return (actor_id in self.valid_actor_ids) and (film_id in self.valid_film_ids)
+
+    def validate_film_category(self, film_id: int, category_id: int) -> bool:
+        return (film_id in self.valid_film_ids) and (category_id in self.valid_category_ids)
+
+
 class SakilaExporter:
     """Orquestra a exportação das tabelas e valida contagens."""
 
@@ -141,6 +179,9 @@ class SakilaExporter:
         self.fact_writer = fact_writer
         self.conn = self.db_connector.connect()
         self.summary: List[Dict[str, Any]] = []
+        self.checker = ReferentialIntegrityChecker()
+        self.error_log_path = os.environ.get("SAKILA_ERROR_LOG", "integrity_errors.log")
+        self._err_fp = open(self.error_log_path, "w", encoding="utf-8")
 
     def _build_fact(self, predicate: str, args: List[Any]) -> str:
         formatted = ", ".join(_format_arg(a) for a in args)
@@ -165,7 +206,7 @@ class SakilaExporter:
         - Valida a contagem de fatos gerados
         - Registra resumo
         """
-        print(f"\n[+] Exportando '{table_name}'...")
+        # Exporta tabela "pai" com resumo em linha
         mysql_count = self._get_table_count(table_name)
 
         facts_count = 0
@@ -178,13 +219,10 @@ class SakilaExporter:
                     self.fact_writer.write_fact(fact)
                     facts_count += 1
                 except Exception as e:
-                    # Em caso de erro de linha, mantemos processo e relatamos divergência
                     print(f"  [!] Erro ao processar linha: {e}")
 
         status = "OK" if mysql_count == facts_count else "DIVERGÊNCIA"
-        print(f"    - Registros no MySQL: {mysql_count}")
-        print(f"    - Fatos Prolog gerados: {facts_count}")
-        print(f"    - Status: {status}")
+        print(f"[+] Exportando '{table_name}'... ({mysql_count} registros) -> {status} ({facts_count} fatos escritos)")
 
         self.summary.append(
             {
@@ -195,6 +233,12 @@ class SakilaExporter:
                 "status": status,
             }
         )
+
+    def _log_rejection(self, label: str, msg: str) -> None:
+        try:
+            self._err_fp.write(f"REJEITADO ({label}): {msg}\n")
+        except Exception:
+            pass
 
     def run_export(self) -> None:
         print("Iniciando exportação da base Sakila para fatos Prolog...")
@@ -225,22 +269,92 @@ class SakilaExporter:
         def map_film_category(row: Dict[str, Any]) -> List[Any]:
             return [row.get("film_id"), row.get("category_id")]
 
-        # Exportações
+        # 1) Carregar chaves primárias
+        print("\n[+] Carregando chaves primárias...")
+        count_actor_ids = self.checker.load_primary_keys(self.conn, "actor", "actor_id")
+        print(f"    - Carregados {count_actor_ids} IDs de 'actor'.")
+        count_film_ids = self.checker.load_primary_keys(self.conn, "film", "film_id")
+        print(f"    - Carregados {count_film_ids} IDs de 'film'.")
+        count_category_ids = self.checker.load_primary_keys(self.conn, "category", "category_id")
+        print(f"    - Carregados {count_category_ids} IDs de 'category'.")
+
+        # 2) Exportar tabelas pai (com resumo em linha)
         self.export_table("actor", "actor", map_actor)
         self.export_table("film", "film", map_film)
         self.export_table("category", "category", map_category)
-        self.export_table("film_actor", "acted_in", map_film_actor)
-        self.export_table("film_category", "film_category", map_film_category)
 
-        print("\nExportação finalizada com sucesso.")
+        # 3) Processar tabelas filho com validação
+        # acted_in
+        print("\n[+] Processando 'acted_in'...")
+        mysql_read = self._get_table_count("film_actor")
+        valid_written = 0
+        orphan_rejected = 0
+        with self.conn.cursor(dictionary=True) as cur:
+            cur.execute("SELECT * FROM film_actor;")
+            for row in cur:
+                actor_id = int(row.get("actor_id"))
+                film_id = int(row.get("film_id"))
+                if self.checker.validate_acted_in(actor_id, film_id):
+                    fact = self._build_fact("acted_in", [actor_id, film_id])
+                    self.fact_writer.write_fact(fact)
+                    valid_written += 1
+                else:
+                    orphan_rejected += 1
+                    self._log_rejection(
+                        "acted_in",
+                        f"Registro órfão. ActorID '{actor_id}' ou FilmID '{film_id}' não encontrado.",
+                    )
+        status = "OK" if mysql_read == valid_written and orphan_rejected == 0 else "DIVERGÊNCIA"
+        print(f"    - Registros lidos do MySQL: {mysql_read}")
+        print(f"    - Fatos válidos escritos: {valid_written}")
+        print(f"    - Registros órfãos (rejeitados): {orphan_rejected}")
+        print(f"    - Status: {status}")
+
+        # film_category
+        print("\n[+] Processando 'film_category'...")
+        mysql_read = self._get_table_count("film_category")
+        valid_written = 0
+        orphan_rejected = 0
+        with self.conn.cursor(dictionary=True) as cur:
+            cur.execute("SELECT * FROM film_category;")
+            for row in cur:
+                film_id = int(row.get("film_id"))
+                category_id = int(row.get("category_id"))
+                if self.checker.validate_film_category(film_id, category_id):
+                    fact = self._build_fact("film_category", [film_id, category_id])
+                    self.fact_writer.write_fact(fact)
+                    valid_written += 1
+                else:
+                    orphan_rejected += 1
+                    self._log_rejection(
+                        "film_category",
+                        f"Registro órfão. FilmID '{film_id}' ou CategoryID '{category_id}' não encontrado.",
+                    )
+        status = "OK" if mysql_read == valid_written and orphan_rejected == 0 else "DIVERGÊNCIA"
+        print(f"    - Registros lidos do MySQL: {mysql_read}")
+        print(f"    - Fatos válidos escritos: {valid_written}")
+        print(f"    - Registros órfãos (rejeitados): {orphan_rejected}")
+        print(f"    - Status: {status}")
+
+        print("\nExportação finalizada.")
+        try:
+            print(f"Arquivo gerado em: {self.fact_writer.filepath}")
+            print(f"Log de erros em: {self.error_log_path}")
+        except Exception:
+            pass
 
 
 def main():
-    # Caminhos padrão
-    config_path = os.environ.get("SAKILA_CONFIG", "config.ini")
+    # Default seguro: backend/config/config.ini relativo ao script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_config = os.path.normpath(os.path.join(script_dir, "..", "config", "config.ini"))
+    config_path = os.environ.get("SAKILA_CONFIG", default_config)
     output_path = os.environ.get(
-        "SAKILA_OUTPUT", os.path.join("prolog", "knowledge", "sakila_kb.pl")
+        "SAKILA_OUTPUT",
+        os.path.join("prolog", "knowledge", "sakila_kb.pl")
     )
+    print(f"[INFO] Usando config: {config_path}")
+    print(f"[INFO] Saída: {output_path}")
 
     try:
         db = DatabaseConnector(config_path)
