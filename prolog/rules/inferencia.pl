@@ -13,7 +13,8 @@
     filmes_por_ator/2,
     genero_do_filme/2,
     filmes_por_genero/2,
-    recomendar_por_ator/2
+    recomendar_por_ator/2,
+    contar_filmes_por_genero_e_ano/3
 ]).
 
 % Importa o módulo de fatos pelo caminho relativo correto
@@ -64,3 +65,23 @@ recomendar_por_ator(NomeAtor, FilmeRecomendado) :-
     FilmeRecomendado \= FilmeOriginal,
     % Filtro: ator não atuou no filme recomendado
     \+ filmes_por_ator(NomeAtor, FilmeRecomendado).
+
+% ---------------------------------------------------------------------------
+% Regra de agregação: contagem de filmes por gênero e ano
+% contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem)
+% Sucede unificando Contagem com o número total de filmes que pertencem
+% ao gênero NomeGenero e foram lançados no ano Ano.
+% ---------------------------------------------------------------------------
+
+% Regra auxiliar (não exportada): determina se um filme pertence ao gênero e ano.
+filme_do_genero_e_ano(NomeGenero, Ano, TituloFilme) :-
+    sakila_facts:category(CategoryID, NomeGenero),
+    sakila_facts:film_category(FilmID, CategoryID),
+    sakila_facts:film(FilmID, TituloFilme, _, Ano, _).
+
+% Regra principal de contagem usando agregação com findall/3 + length/2.
+contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
+    findall(TituloFilme,
+            filme_do_genero_e_ano(NomeGenero, Ano, TituloFilme),
+            ListaDeFilmes),
+    length(ListaDeFilmes, Contagem).
