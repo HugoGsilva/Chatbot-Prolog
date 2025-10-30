@@ -29,6 +29,23 @@ except Exception as e:
     sys.exit(1)
 
 
+PROLOG_MODULE_HEADER = """
+/**
+ * Módulo de Fatos Sakila (Gerado Automaticamente)
+ *
+ * Este módulo contém exclusivamente dados (fatos) do domínio Sakila,
+ * gerados pelo script run_export_subset.py.
+ */
+ :- module(sakila_facts, [
+     actor/2,
+     film/5,
+     acted_in/2,
+     category/2,
+     film_category/2
+ ]).
+"""
+
+
 def _build_fact(predicate: str, args: List[Any]) -> str:
     """Constroi string de fato Prolog usando o formatador compartilhado."""
     formatted = ", ".join(_format_arg(a) for a in args)
@@ -71,6 +88,21 @@ class SubsetIntegrity:
 
     def allow_film_category(self, film_id: int, category_id: int) -> bool:
         return (film_id in self.film_ids) and (category_id in self.category_ids)
+
+
+class HeaderFactWriter(FactWriter):
+    """Extensão de FactWriter que escreve cabeçalho de módulo ao abrir o arquivo."""
+
+    def __init__(self, filepath: str) -> None:
+        super().__init__(filepath)
+        self.write_header()
+
+    def write_header(self) -> None:
+        try:
+            self._fp.write(PROLOG_MODULE_HEADER.strip() + "\n\n")
+            self._fp.flush()
+        except Exception:
+            pass
 
 
 def _export_actors(conn, writer: FactWriter) -> int:
@@ -186,7 +218,7 @@ def main() -> None:
     try:
         db = DatabaseConnector(config_path)
         conn = db.connect()
-        writer = FactWriter(output_path)
+        writer = HeaderFactWriter(output_path)
 
         # Carrega subconjunto
         print("\n[+] Carregando subconjunto de IDs (20 atores, 50 filmes, 16 categorias)...")

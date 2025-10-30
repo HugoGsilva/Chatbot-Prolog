@@ -1,3 +1,17 @@
+/**
+ * Módulo de Fatos Sakila (Gerado Automaticamente)
+ *
+ * Este módulo contém exclusivamente dados (fatos) do domínio Sakila,
+ * gerados pelo script run_export_subset.py.
+ */
+ :- module(sakila_facts, [
+     actor/2,
+     film/5,
+     acted_in/2,
+     category/2,
+     film_category/2
+ ]).
+
 actor(1, 'PENELOPE GUINESS').
 actor(2, 'NICK WAHLBERG').
 actor(3, 'ED CHASE').
