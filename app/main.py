@@ -4,6 +4,7 @@ para confirmar que o servidor está rodando.
 """
 
 from fastapi import FastAPI
+from .prolog_service import prolog_service
 
 
 app = FastAPI(
@@ -16,3 +17,9 @@ app = FastAPI(
 @app.get("/")
 async def health_check():
     return {"status": "Sakila-Prolog API running"}
+
+
+@app.on_event("startup")
+async def on_startup():
+    # Carrega as regras Prolog no startup (carregamento único)
+    prolog_service.load_rules("prolog/rules/inferencia.pl")
