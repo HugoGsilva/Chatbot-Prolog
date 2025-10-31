@@ -78,7 +78,7 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
 
 
 @app.get("/recomendar-por-ator/{nome_ator}", response_model=list[Filme])
-async def recomendar_filmes_por_ator(nome_ator: str):
+async def recomendar_filmes_por_ator(nome_ator: str, session_id: str):
     """Recomenda filmes com base nos gêneros associados aos filmes de um ator.
 
     Normaliza o nome do ator e consulta a regra Prolog
@@ -96,6 +96,12 @@ async def recomendar_filmes_por_ator(nome_ator: str):
         )
 
     response_data = [{"titulo": r["FilmeRecomendado"]} for r in results]
+    # Grava histórico de conversa no Redis (session manager), usando nome_ator original
+    try:
+        await session_service.add_to_history(session_id, f"User: {nome_ator}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
     return response_data
 
 
