@@ -68,7 +68,8 @@ async def test_recomendar_filmes_endpoint(anyio_backend, monkeypatch: pytest.Mon
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            ator = "PENELOPE GUINESS"
+            # TDD-Red: usar input fuzzy para validar find_best_actor
+            ator = "penelope"
             ator_encoded = quote(ator)
             resp = await client.get(f"/recomendar-por-ator/{ator_encoded}?session_id=sessao_de_teste_rec")
 

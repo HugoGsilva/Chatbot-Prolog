@@ -114,8 +114,15 @@ async def recomendar_filmes_por_ator(nome_ator: str, session_id: str):
     `sakila_rules:recomendar_por_ator/2`, retornando uma lista no formato
     do schema `Filme`.
     """
-    normalized_name = normalize_actor_name(nome_ator)
-    query_string = f"sakila_rules:recomendar_por_ator('{normalized_name}', FilmeRecomendado)"
+    # Usa fuzzy matching para resolver o melhor nome do ator
+    best_match_name = find_best_actor(nome_ator)
+    if not best_match_name:
+        raise HTTPException(
+            status_code=404,
+            detail="Não foi possível gerar recomendações (ator não encontrado ou sem recomendações disponíveis)",
+        )
+
+    query_string = f"sakila_rules:recomendar_por_ator('{best_match_name}', FilmeRecomendado)"
     results = prolog_service.query(query_string)
 
     if not results:
