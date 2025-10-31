@@ -52,7 +52,7 @@ async def health_check():
 
 
 @app.get("/filmes-por-ator/{nome_ator}", response_model=list[Filme])
-async def get_filmes_por_ator(nome_ator: str):
+async def get_filmes_por_ator(nome_ator: str, session_id: str):
     """Retorna filmes para um ator indicado, consultando o Prolog.
 
     Normaliza o nome para mitigar case-sensitivity e retorna uma lista
@@ -67,6 +67,13 @@ async def get_filmes_por_ator(nome_ator: str):
         raise HTTPException(status_code=404, detail="Ator não encontrado")
 
     response_data = [{"titulo": r["TituloFilme"]} for r in results]
+    # Grava histórico de conversa no Redis (session manager)
+    try:
+        await session_service.add_to_history(session_id, f"User: {nome_ator}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        # Não falha o endpoint por erro de histórico; apenas loga
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
     return response_data
 
 

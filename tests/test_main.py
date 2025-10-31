@@ -2,26 +2,41 @@ import pytest
 import httpx
 from urllib.parse import quote
 from asgi_lifespan import LifespanManager
+from unittest.mock import AsyncMock
 from app.main import app
 
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
 @pytest.mark.anyio
-async def test_get_filmes_por_ator_endpoint(anyio_backend):
+async def test_get_filmes_por_ator_endpoint(anyio_backend, monkeypatch: pytest.MonkeyPatch):
     """Verifica contrato esperado do endpoint de filmes por ator.
 
     Espera status 200 e uma lista de objetos com campo `titulo`.
     Deverá falhar (404) até o endpoint ser implementado.
     """
 
+    # Mock do SessionManager usado dentro de app.main
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    # cliente com aclose para o shutdown do lifespan
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             ator = "PENELOPE GUINESS"
             ator_encoded = quote(ator)
-            resp = await client.get(f"/filmes-por-ator/{ator_encoded}")
+            resp = await client.get(f"/filmes-por-ator/{ator_encoded}?session_id=sessao_de_teste")
 
         # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
         assert resp.status_code == 200
+
+    # Verifica que o histórico foi salvo no Redis via serviço de sessão
+    mock_session_service.add_to_history.assert_any_call("sessao_de_teste", "User: PENELOPE GUINESS")
+    mock_session_service.add_to_history.assert_any_call("sessao_de_teste", f"Bot: {resp.json()}")
 
     data = resp.json()
     assert isinstance(data, list)
