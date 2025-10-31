@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
 from .schemas import Filme, ContagemGenero, Genero
-from .nlu import normalize_actor_name, normalize_genre_name, normalize_film_title
+from .nlu import find_best_actor, normalize_genre_name, normalize_film_title
 from .session_manager import session_service
 from .prolog_service import prolog_service
 
@@ -84,9 +84,12 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
     Normaliza o nome para mitigar case-sensitivity e retorna uma lista
     no formato do schema `Filme`.
     """
-    normalized_name = normalize_actor_name(nome_ator)
+    # Resolve melhor correspondência do ator usando fuzzy matching (thefuzz)
+    best_match_name = find_best_actor(nome_ator)
+    if not best_match_name:
+        raise HTTPException(status_code=404, detail=f"Ator '{nome_ator}' não encontrado.")
     # Prefixo do módulo para chamadas a regras exportadas
-    query_string = f"sakila_rules:filmes_por_ator('{normalized_name}', TituloFilme)"
+    query_string = f"sakila_rules:filmes_por_ator('{best_match_name}', TituloFilme)"
     results = prolog_service.query(query_string)
 
     if not results:

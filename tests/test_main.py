@@ -27,7 +27,8 @@ async def test_get_filmes_por_ator_endpoint(anyio_backend, monkeypatch: pytest.M
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            ator = "PENELOPE GUINESS"
+            # TDD-Red: usar input fuzzy para validar find_best_actor
+            ator = "penelope"
             ator_encoded = quote(ator)
             resp = await client.get(f"/filmes-por-ator/{ator_encoded}?session_id=sessao_de_teste")
 
@@ -35,13 +36,15 @@ async def test_get_filmes_por_ator_endpoint(anyio_backend, monkeypatch: pytest.M
         assert resp.status_code == 200
 
     # Verifica que o histórico foi salvo no Redis via serviço de sessão
-    mock_session_service.add_to_history.assert_any_call("sessao_de_teste", "User: PENELOPE GUINESS")
+    # Mantém histórico com a query original (fuzzy)
+    mock_session_service.add_to_history.assert_any_call("sessao_de_teste", f"User: {ator}")
     mock_session_service.add_to_history.assert_any_call("sessao_de_teste", f"Bot: {resp.json()}")
 
     data = resp.json()
     assert isinstance(data, list)
     assert len(data) > 0
-    assert data[0]["titulo"] is not None
+    # Comportamento esperado: primeiro filme de PENELOPE GUINESS
+    assert data[0]["titulo"] == "ACADEMY DINOSAUR"
 
 
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])

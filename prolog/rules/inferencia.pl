@@ -93,6 +93,9 @@ contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
 % Regra utilitária: lista de todos os atores (ordenada e sem duplicados)
 % get_all_actors(-ListaNomes)
 % Retorna uma lista ordenada e única de todos os nomes de atores.
+% Implementação robusta: findall/3 + sort/2 evita erros de contexto ($bags)
+% observados com setof/3 em alguns cenários de qualificação de módulo.
 % ---------------------------------------------------------------------------
 get_all_actors(ListaNomes) :-
-    setof(Nome, ID^sakila_facts:actor(ID, Nome), ListaNomes).
+    findall(Nome, sakila_facts:actor(_, Nome), Nomes),
+    sort(Nomes, ListaNomes).
