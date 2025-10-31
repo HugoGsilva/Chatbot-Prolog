@@ -85,37 +85,27 @@ document.addEventListener('DOMContentLoaded', () => {
   function routeIntent(message) {
     const msg = message.trim();
 
-    // contar filmes de <genero> em <ano>
-    let m = msg.match(/^contar\s+filmes\s+de\s+(.+)\s+em\s+(\d{4})$/i);
-    if (m) {
-      return { endpoint: '/contar-filmes', params: { genero: m[1], ano: m[2] } };
+    // 1. FASE FUZZY (Nível 1): Encontrar a INTENÇÃO mais próxima
+    const results = fuse.search(msg);
+
+    if (!results.length) {
+      return null; // Não encontrou nenhuma intenção provável
     }
 
-    // recomendar com base em <ator>
-    m = msg.match(/^recomendar\s+com\s+base\s+em\s+(.+)$/i);
-    if (m) {
-      return { endpoint: `/recomendar-por-ator/${encodeURIComponent(m[1])}`, params: {} };
+    const bestIntent = results[0].item; // O protótipo vencedor
+
+    // 2. FASE REGEX (Nível 1.5): Extrair as ENTIDADES
+    const matches = msg.match(bestIntent.regex);
+
+    if (!matches) {
+      // A intenção era provável, mas a estrutura estava incompleta
+      return null;
     }
 
-    // filmes por <ator>
-    m = msg.match(/^filmes\s+por\s+(.+)$/i);
-    if (m) {
-      return { endpoint: `/filmes-por-ator/${encodeURIComponent(m[1])}`, params: {} };
-    }
+    // 3. SUCESSO: Construir a URL da API
+    const url = bestIntent.template(matches);
 
-    // gênero/genero do <filme>
-    m = msg.match(/^(g[eê]nero)\s+do\s+(.+)$/i);
-    if (m) {
-      return { endpoint: `/genero-do-filme/${encodeURIComponent(m[2])}`, params: {} };
-    }
-
-    // filmes de <genero>
-    m = msg.match(/^filmes\s+de\s+(.+)$/i);
-    if (m) {
-      return { endpoint: `/filmes-por-genero/${encodeURIComponent(m[1])}`, params: {} };
-    }
-
-    return null;
+    return url; // Retorna a URL final
   }
 
   async function handleSendMessage() {
@@ -125,21 +115,24 @@ document.addEventListener('DOMContentLoaded', () => {
     displayMessage('User', text);
     userInput.value = '';
 
-    const route = routeIntent(text);
-    if (!route) {
+    // 1. Obter a URL completa (já processada pelo Nível 1 Híbrido)
+    let url = routeIntent(text);
+
+    if (!url) {
       displayMessage('Bot', 'Não entendi. Tente: "filmes por PENELOPE GUINESS"');
       return;
     }
 
-    let url = route.endpoint;
-    if (url === '/contar-filmes') {
-      const params = new URLSearchParams({ ...route.params, session_id: SESSION_ID });
-      url = `${url}?${params.toString()}`;
+    // 2. Adicionar o session_id
+    if (url.startsWith('/contar-filmes')) {
+      // O /contar-filmes já tem ?genero=...&ano=...
+      url += `&session_id=${SESSION_ID}`;
     } else {
-      const joiner = url.includes('?') ? '&' : '?';
-      url = `${url}${joiner}session_id=${encodeURIComponent(SESSION_ID)}`;
+      // Os outros endpoints (path params) precisam de um ?
+      url += `?session_id=${SESSION_ID}`;
     }
 
+    // 3. Fazer o Fetch (esta parte permanece igual)
     try {
       const resp = await fetch(url);
       if (!resp.ok) {
