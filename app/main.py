@@ -106,7 +106,7 @@ async def recomendar_filmes_por_ator(nome_ator: str, session_id: str):
 
 
 @app.get("/contar-filmes", response_model=ContagemGenero)
-async def contar_filmes_por_genero_e_ano(genero: str, ano: int):
+async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str):
     """Conta filmes pelo gênero e ano de lançamento usando regra Prolog agregadora."""
     normalized_genero = normalize_genre_name(genero)
     query_string = f"sakila_rules:contar_filmes_por_genero_e_ano('{normalized_genero}', {ano}, Contagem)"
@@ -119,7 +119,15 @@ async def contar_filmes_por_genero_e_ano(genero: str, ano: int):
         )
 
     contagem_result = results[0]["Contagem"]
-    return {"genero": normalized_genero, "ano": ano, "contagem": contagem_result}
+    response_data = {"genero": normalized_genero, "ano": ano, "contagem": contagem_result}
+    # Grava histórico de conversa no Redis (session manager)
+    try:
+        user_query = f"genero={genero}, ano={ano}"
+        await session_service.add_to_history(session_id, f"User: {user_query}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+    return response_data
 
 
 @app.get("/history/{session_id}")

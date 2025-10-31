@@ -84,21 +84,36 @@ async def test_recomendar_filmes_endpoint(anyio_backend, monkeypatch: pytest.Mon
 
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
 @pytest.mark.anyio
-async def test_contar_filmes_endpoint(anyio_backend):
+async def test_contar_filmes_endpoint(anyio_backend, monkeypatch: pytest.MonkeyPatch):
     """Contrato do endpoint de contagem de filmes por gênero e ano.
 
     Espera status 200 e um objeto no formato do schema ContagemGenero.
     Deverá falhar (404) até o endpoint ser implementado.
     """
+    # Mock do SessionManager usado dentro de app.main
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    # cliente com aclose para o shutdown do lifespan
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
 
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             params = {"genero": "Action", "ano": 2006}
+            params["session_id"] = "sessao_de_teste_contagem"
             resp = await client.get("/contar-filmes", params=params)
 
     # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
     assert resp.status_code == 200
+
+    # Verifica que o histórico foi salvo no Redis via serviço de sessão
+    user_query = f"genero={params['genero']}, ano={params['ano']}"
+    mock_session_service.add_to_history.assert_any_call("sessao_de_teste_contagem", f"User: {user_query}")
+    mock_session_service.add_to_history.assert_any_call("sessao_de_teste_contagem", f"Bot: {resp.json()}")
 
     data = resp.json()
     assert isinstance(data, dict)
