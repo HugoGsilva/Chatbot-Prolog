@@ -5,8 +5,8 @@ para confirmar que o servidor está rodando.
 
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
-from .schemas import Filme, ContagemGenero
-from .nlu import normalize_actor_name, normalize_genre_name
+from .schemas import Filme, ContagemGenero, Genero
+from .nlu import normalize_actor_name, normalize_genre_name, normalize_film_title
 from .session_manager import session_service
 from .prolog_service import prolog_service
 
@@ -99,6 +99,31 @@ async def recomendar_filmes_por_ator(nome_ator: str, session_id: str):
     # Grava histórico de conversa no Redis (session manager), usando nome_ator original
     try:
         await session_service.add_to_history(session_id, f"User: {nome_ator}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+    return response_data
+
+
+@app.get("/genero-do-filme/{titulo_filme}", response_model=Genero)
+async def get_genero_do_filme(titulo_filme: str, session_id: str):
+    """Retorna o gênero de um filme específico, consultando o Prolog.
+
+    Normaliza o título para o formato esperado e retorna um objeto
+    no formato do schema `Genero`.
+    """
+    normalized_title = normalize_film_title(titulo_filme)
+    query_string = f"sakila_rules:genero_do_filme('{normalized_title}', NomeGenero)"
+    results = prolog_service.query(query_string)
+
+    if not results or "NomeGenero" not in results[0]:
+        raise HTTPException(status_code=404, detail="Filme ou gênero não encontrado")
+
+    genero_result = results[0]["NomeGenero"]
+    response_data = {"nome": genero_result}
+    # Grava histórico de conversa no Redis (session manager)
+    try:
+        await session_service.add_to_history(session_id, f"User: {titulo_filme}")
         await session_service.add_to_history(session_id, f"Bot: {response_data}")
     except Exception as e:
         print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
