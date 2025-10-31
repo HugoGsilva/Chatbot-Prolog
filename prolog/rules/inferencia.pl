@@ -15,7 +15,9 @@
     filmes_por_genero/2,
     recomendar_por_ator/2,
     contar_filmes_por_genero_e_ano/3,
-    get_all_actors/1
+    get_all_actors/1,
+    get_all_genres/1,
+    get_all_films/1
 ]).
 
 % Importa o módulo de fatos pelo caminho relativo correto
@@ -99,3 +101,22 @@ contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
 get_all_actors(ListaNomes) :-
     findall(Nome, sakila_facts:actor(_, Nome), Nomes),
     sort(Nomes, ListaNomes).
+
+% ---------------------------------------------------------------------------
+% Regras utilitárias: listas de todos os gêneros e filmes
+% get_all_genres(-ListaGeneros)
+% Retorna uma lista ordenada e única de todos os nomes de gêneros.
+% Implementação robusta: findall/3 + sort/2
+% ---------------------------------------------------------------------------
+get_all_genres(ListaGeneros) :-
+    findall(Nome, sakila_facts:category(_, Nome), Nomes),
+    sort(Nomes, ListaGeneros).
+
+% ---------------------------------------------------------------------------
+% get_all_films(-ListaTitulos)
+% Retorna uma lista ordenada e única de todos os títulos de filmes.
+% Implementação robusta: findall/3 + sort/2
+% ---------------------------------------------------------------------------
+get_all_films(ListaTitulos) :-
+    findall(Titulo, sakila_facts:film(_, Titulo, _, _, _), Titulos),
+    sort(Titulos, ListaTitulos).

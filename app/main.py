@@ -15,6 +15,8 @@ from .prolog_service import prolog_service
 
 # Cache global de nomes de atores para NLU (carregada no startup)
 ACTOR_CACHE: list[str] = []
+GENRE_CACHE: list[str] = []
+FILM_CACHE: list[str] = []
 
 
 @asynccontextmanager
@@ -35,6 +37,32 @@ async def lifespan(app: FastAPI):
             print("[Cache] [ERRO] Não foi possível carregar a cache de atores do Prolog.")
     except Exception as e:
         print(f"[Cache] [ERRO] Exceção ao carregar cache de atores: {e}")
+
+    # --- Carregar Cache de Géneros ---
+    print("[Cache] A carregar cache de nomes de géneros...")
+    global GENRE_CACHE
+    try:
+        results_genre = prolog_service.query("sakila_rules:get_all_genres(ListaGeneros)")
+        if results_genre and "ListaGeneros" in results_genre[0]:
+            GENRE_CACHE = results_genre[0]["ListaGeneros"]
+            print(f"[Cache] Cache de Géneros carregada com {len(GENRE_CACHE)} nomes.")
+        else:
+            print("[Cache] [ERRO] Não foi possível carregar a cache de géneros.")
+    except Exception as e:
+        print(f"[Cache] [ERRO] Exceção ao carregar cache de géneros: {e}")
+
+    # --- Carregar Cache de Títulos de Filmes ---
+    print("[Cache] A carregar cache de títulos de filmes...")
+    global FILM_CACHE
+    try:
+        results_film = prolog_service.query("sakila_rules:get_all_films(ListaTitulos)")
+        if results_film and "ListaTitulos" in results_film[0]:
+            FILM_CACHE = results_film[0]["ListaTitulos"]
+            print(f"[Cache] Cache de Filmes carregada com {len(FILM_CACHE)} nomes.")
+        else:
+            print("[Cache] [ERRO] Não foi possível carregar a cache de filmes.")
+    except Exception as e:
+        print(f"[Cache] [ERRO] Exceção ao carregar cache de filmes: {e}")
     # --- FIM DA NOVA LÓGICA ---
     # Testa conexão com Redis (SessionManager)
     try:
