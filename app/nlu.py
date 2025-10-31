@@ -66,7 +66,31 @@ def find_best_actor(query: str) -> Optional[str]:
     """
     try:
         # Import local evita ciclo de import (main -> nlu -> main)
-        from app.main import ACTOR_CACHE  # type: ignore
+        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
     except Exception:
         ACTOR_CACHE = []  # fallback quando cache não estiver disponível
     return find_best_match(query, ACTOR_CACHE)
+
+
+def find_best_genre(query: str) -> Optional[str]:
+    """Wrapper específico para gêneros: usa a cache global de gêneros
+    carregada no startup da API para fuzzy matching.
+    """
+    try:
+        # Import local evita ciclo de import (main -> nlu -> main)
+        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
+    except Exception:
+        GENRE_CACHE = []
+    return find_best_match(query, GENRE_CACHE)
+
+
+def find_best_film(query: str) -> Optional[str]:
+    """Wrapper específico para títulos de filmes: usa a cache global de
+    títulos carregada no startup da API para fuzzy matching.
+    """
+    try:
+        # Import local evita ciclo de import (main -> nlu -> main)
+        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
+    except Exception:
+        FILM_CACHE = []
+    return find_best_match(query, FILM_CACHE)
