@@ -73,10 +73,8 @@ services:
       - SAKILA_CONFIG=/app/backend/config/config.ini
       - SAKILA_OUTPUT=/app/prolog/knowledge/sakila_kb.pl
       - SAKILA_ERROR_LOG=/app/integrity_errors.log
-    # CORREÇÃO (Erro 4): A porta 8000 só é necessária se a API (uvicorn) estiver rodando.
-    # Como o contexto original diz que o padrão é 'pytest', ela está comentada.
-    # ports:
-    #   - "8000:8000" # Descomente isto quando 'app/main.py' existir e o comando for 'uvicorn'
+    ports:
+      - "8000:8000"
       
     # CORREÇÃO (Contexto): Monta o repositório inteiro (.), não apenas ./app.
     # Isso é necessário para o pytest encontrar /tests e o script encontrar /backend.

@@ -4,7 +4,10 @@ para confirmar que o servidor está rodando.
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+import os
 from .schemas import Filme, ContagemGenero, Genero
 from .nlu import normalize_actor_name, normalize_genre_name, normalize_film_title
 from .session_manager import session_service
@@ -42,8 +45,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-@app.get("/")
+@app.get("/", response_class=FileResponse)
+async def read_index():
+    return os.path.join(STATIC_DIR, "index.html")
+
+@app.get("/health")
 async def health_check():
     return {"status": "Sakila-Prolog API running"}
 
