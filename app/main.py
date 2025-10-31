@@ -13,12 +13,29 @@ from .nlu import normalize_actor_name, normalize_genre_name, normalize_film_titl
 from .session_manager import session_service
 from .prolog_service import prolog_service
 
+# Cache global de nomes de atores para NLU (carregada no startup)
+ACTOR_CACHE: list[str] = []
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     print("Iniciando API e carregando motor Prolog...")
     prolog_service.load_rules("prolog/rules/inferencia.pl")
+    # --- INÍCIO DA NOVA LÓGICA ---
+    print("[Cache] A carregar cache de nomes de atores...")
+    global ACTOR_CACHE
+    try:
+        query_string = "sakila_rules:get_all_actors(ListaNomes)"
+        results = prolog_service.query(query_string)
+        if results and "ListaNomes" in results[0]:
+            ACTOR_CACHE = results[0]["ListaNomes"]
+            print(f"[Cache] Cache de Atores carregada com {len(ACTOR_CACHE)} nomes.")
+        else:
+            print("[Cache] [ERRO] Não foi possível carregar a cache de atores do Prolog.")
+    except Exception as e:
+        print(f"[Cache] [ERRO] Exceção ao carregar cache de atores: {e}")
+    # --- FIM DA NOVA LÓGICA ---
     # Testa conexão com Redis (SessionManager)
     try:
         await session_service.test_connection()

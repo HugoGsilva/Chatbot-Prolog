@@ -1,6 +1,13 @@
 """
-NLU leve para normalização de entidades (atores, gêneros, etc.).
+NLU leve para normalização de entidades e fuzzy matching.
+
+Inclui funções de normalização e helpers para encontrar a melhor
+correspondência usando thefuzz contra caches carregadas no startup.
 """
+
+from thefuzz import process
+
+from typing import Optional
 
 def normalize_actor_name(name: str) -> str:
     """Normaliza o nome do ator para o formato esperado pelo Prolog.
@@ -27,3 +34,39 @@ def normalize_film_title(title: str) -> str:
     "ACADEMY DINOSAUR" no Sakila.
     """
     return title.upper()
+
+
+# ---------------------------------------------------------------------------
+# Fuzzy Matching Helpers
+# ---------------------------------------------------------------------------
+
+def find_best_match(query: str, cache: list[str], threshold: int = 80) -> Optional[str]:
+    """Retorna o melhor match para `query` dentro de `cache` se a pontuação
+    atingir o `threshold`; caso contrário, retorna None.
+
+    - Normaliza apenas para comparação (uppercase) antes do matching.
+    - Usa `process.extractOne` que devolve `(string_encontrada, pontuação)`.
+    """
+    if not query or not cache:
+        return None
+
+    result = process.extractOne(query.upper(), cache)
+    if not result:
+        return None
+
+    value, score = result[0], result[1]
+    return value if score >= threshold else None
+
+
+def find_best_actor(query: str) -> Optional[str]:
+    """Wrapper específico para atores: consulta a cache global de atores
+    carregada no startup da API.
+
+    Observação: usa import local para evitar ciclo de importação com `app.main`.
+    """
+    try:
+        # Import local evita ciclo de import (main -> nlu -> main)
+        from app.main import ACTOR_CACHE  # type: ignore
+    except Exception:
+        ACTOR_CACHE = []  # fallback quando cache não estiver disponível
+    return find_best_match(query, ACTOR_CACHE)
