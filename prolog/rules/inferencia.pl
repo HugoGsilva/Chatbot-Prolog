@@ -14,7 +14,8 @@
     genero_do_filme/2,
     filmes_por_genero/2,
     recomendar_por_ator/2,
-    contar_filmes_por_genero_e_ano/3
+    contar_filmes_por_genero_e_ano/3,
+    get_all_actors/1
 ]).
 
 % Importa o módulo de fatos pelo caminho relativo correto
@@ -87,3 +88,11 @@ contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
             filme_do_genero_e_ano(NomeGenero, Ano, TituloFilme),
             ListaDeFilmes),
     length(ListaDeFilmes, Contagem).
+
+% ---------------------------------------------------------------------------
+% Regra utilitária: lista de todos os atores (ordenada e sem duplicados)
+% get_all_actors(-ListaNomes)
+% Retorna uma lista ordenada e única de todos os nomes de atores.
+% ---------------------------------------------------------------------------
+get_all_actors(ListaNomes) :-
+    setof(Nome, ID^sakila_facts:actor(ID, Nome), ListaNomes).
