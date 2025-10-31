@@ -3,6 +3,49 @@ document.addEventListener('DOMContentLoaded', () => {
   const userInput = document.getElementById('user-input');
   const sendButton = document.getElementById('send-button');
 
+  // --- ETAPA 2: BANCO DE INTENÇÕES ---
+  // Lista de todas as intenções que o bot conhece.
+  // 'phrase' é o que o Fuse.js usa para o fuzzy match.
+  // 'regex' é o que usamos para extrair a entidade DEPOIS que o match for encontrado.
+  const intentPrototypes = [
+    {
+      phrase: "contar filmes de GENERO em ANO",
+      regex: /^contar\s+filmes\s+de\s+(.+)\s+em\s+(\d{4})$/i,
+      template: (matches) => `/contar-filmes?genero=${encodeURIComponent(matches[1])}&ano=${matches[2]}`
+    },
+    {
+      phrase: "recomendar com base em ATOR",
+      // Este RegEx aceita várias formas de pedir recomendação
+      regex: /^(recomendar|recomendação)\s+(com\s+base\s+em|baseado\s+em|do|de|pelo)\s+(.+)$/i,
+      template: (matches) => `/recomendar-por-ator/${encodeURIComponent(matches[3])}`
+    },
+    {
+      phrase: "filmes por ATOR",
+      // Este RegEx aceita "filmes por/do/de/pelo" e "filme" (singular)
+      regex: /^filmes?\s+(por|do|de|pelo)\s+(.+)$/i,
+      template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[2])}`
+    },
+    {
+      phrase: "gênero do FILME",
+      regex: /^(g[eê]nero)\s+(do|de)\s+(.+)$/i,
+      template: (matches) => `/genero-do-filme/${encodeURIComponent(matches[3])}`
+    },
+    {
+      phrase: "filmes de GENERO",
+      // Este RegEx aceita "filme de" (singular)
+      // NOTA: É muito parecido com "filmes por ATOR", mas o fuzzy matching vai ajudar
+      regex: /^filmes?\s+de\s+(.+)$/i,
+      template: (matches) => `/filmes-por-genero/${encodeURIComponent(matches[1])}`
+    }
+  ];
+
+  // --- ETAPA 3: INICIALIZAR O FUSE.JS ---
+  const fuseOptions = {
+    keys: ['phrase'],  // Procurar apenas na chave "phrase"
+    threshold: 0.5     // Nível de tolerância (0.0 = exato, 1.0 = tudo)
+  };
+  const fuse = new Fuse(intentPrototypes, fuseOptions);
+
   function generateSessionId() {
     return 'sess_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
