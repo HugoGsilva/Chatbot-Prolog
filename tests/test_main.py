@@ -148,13 +148,14 @@ async def test_get_genero_do_filme_endpoint(anyio_backend, monkeypatch: pytest.M
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get("/genero-do-filme/ACADEMY%20DINOSAUR?session_id=sessao_teste_genero")
+            # Envia input fuzzy em minúsculas
+            resp = await client.get("/genero-do-filme/academy%20dinosaur?session_id=sessao_teste_genero")
 
     # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
     assert resp.status_code == 200
 
     # Verifica que o histórico foi salvo no Redis via serviço de sessão
-    mock_session_service.add_to_history.assert_any_call("sessao_teste_genero", "User: ACADEMY DINOSAUR")
+    mock_session_service.add_to_history.assert_any_call("sessao_teste_genero", "User: academy dinosaur")
     mock_session_service.add_to_history.assert_any_call("sessao_teste_genero", f"Bot: {resp.json()}")
 
     data = resp.json()

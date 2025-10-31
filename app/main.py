@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
 from .schemas import Filme, ContagemGenero, Genero
-from .nlu import find_best_actor, find_best_genre, normalize_film_title
+from .nlu import find_best_actor, find_best_genre, find_best_film
 from .session_manager import session_service
 from .prolog_service import prolog_service
 
@@ -176,8 +176,10 @@ async def get_genero_do_filme(titulo_filme: str, session_id: str):
     Normaliza o título para o formato esperado e retorna um objeto
     no formato do schema `Genero`.
     """
-    normalized_title = normalize_film_title(titulo_filme)
-    query_string = f"sakila_rules:genero_do_filme('{normalized_title}', NomeGenero)"
+    best_match_film = find_best_film(titulo_filme)
+    if not best_match_film:
+        raise HTTPException(status_code=404, detail=f"Filme '{titulo_filme}' não encontrado.")
+    query_string = f"sakila_rules:genero_do_filme('{best_match_film}', NomeGenero)"
     results = prolog_service.query(query_string)
 
     if not results or "NomeGenero" not in results[0]:
