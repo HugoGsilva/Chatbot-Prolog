@@ -155,6 +155,29 @@ async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str)
     return response_data
 
 
+@app.get("/filmes-por-genero/{genero}", response_model=list[Filme])
+async def get_filmes_por_genero(genero: str, session_id: str):
+    """Retorna filmes para um gênero específico, consultando o Prolog.
+
+    Normaliza o gênero e retorna uma lista no formato do schema `Filme`.
+    """
+    normalized_genero = normalize_genre_name(genero)
+    query_string = f"sakila_rules:filmes_por_genero('{normalized_genero}', TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail="Gênero não encontrado ou sem filmes associados")
+
+    response_data = [{"titulo": r["TituloFilme"]} for r in results]
+    # Grava histórico de conversa no Redis (session manager)
+    try:
+        await session_service.add_to_history(session_id, f"User: {genero}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+    return response_data
+
+
 @app.get("/history/{session_id}")
 async def get_history(session_id: str, limit: int = 5):
     """Retorna o histórico de mensagens de uma sessão (para validação do Redis)."""
