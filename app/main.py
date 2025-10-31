@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from .schemas import Filme, ContagemGenero
 from .nlu import normalize_actor_name, normalize_genre_name
+from .session_manager import session_service
 from .prolog_service import prolog_service
 
 
@@ -15,11 +16,22 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Iniciando API e carregando motor Prolog...")
     prolog_service.load_rules("prolog/rules/inferencia.pl")
+    # Testa conexão com Redis (SessionManager)
+    try:
+        await session_service.test_connection()
+        print("Conexão com Redis verificada.")
+    except Exception as e:
+        print(f"[WARN] Falha ao conectar no Redis: {e}")
     print("Motor Prolog carregado.")
 
     yield
 
     # Shutdown
+    try:
+        await session_service.client.aclose()
+        print("Conexão Redis fechada.")
+    except Exception as e:
+        print(f"[WARN] Falha ao fechar conexão Redis: {e}")
     print("API desligando...")
 
 
@@ -95,3 +107,10 @@ async def contar_filmes_por_genero_e_ano(genero: str, ano: int):
 
     contagem_result = results[0]["Contagem"]
     return {"genero": normalized_genero, "ano": ano, "contagem": contagem_result}
+
+
+@app.get("/history/{session_id}")
+async def get_history(session_id: str, limit: int = 5):
+    """Retorna o histórico de mensagens de uma sessão (para validação do Redis)."""
+    history = await session_service.get_history(session_id, limit=limit)
+    return {"session_id": session_id, "history": history}

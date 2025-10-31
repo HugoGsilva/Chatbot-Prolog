@@ -67,6 +67,8 @@ services:
     depends_on:
       db-init:
         condition: service_completed_successfully # Roda após o db-init
+      redis:
+        condition: service_started # Garante que o Redis esteja iniciado antes do app
     environment:
       - SAKILA_CONFIG=/app/backend/config/config.ini
       - SAKILA_OUTPUT=/app/prolog/knowledge/sakila_kb.pl
