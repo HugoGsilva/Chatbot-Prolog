@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
 from .schemas import Filme, ContagemGenero, Genero
-from .nlu import find_best_actor, normalize_genre_name, normalize_film_title
+from .nlu import find_best_actor, find_best_genre, normalize_film_title
 from .session_manager import session_service
 from .prolog_service import prolog_service
 
@@ -197,8 +197,10 @@ async def get_genero_do_filme(titulo_filme: str, session_id: str):
 @app.get("/contar-filmes", response_model=ContagemGenero)
 async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str):
     """Conta filmes pelo gênero e ano de lançamento usando regra Prolog agregadora."""
-    normalized_genero = normalize_genre_name(genero)
-    query_string = f"sakila_rules:contar_filmes_por_genero_e_ano('{normalized_genero}', {ano}, Contagem)"
+    best_match_genre = find_best_genre(genero)
+    if not best_match_genre:
+        raise HTTPException(status_code=404, detail=f"Gênero '{genero}' não encontrado.")
+    query_string = f"sakila_rules:contar_filmes_por_genero_e_ano('{best_match_genre}', {ano}, Contagem)"
     results = prolog_service.query(query_string)
 
     if not results or "Contagem" not in results[0]:
@@ -208,7 +210,7 @@ async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str)
         )
 
     contagem_result = results[0]["Contagem"]
-    response_data = {"genero": normalized_genero, "ano": ano, "contagem": contagem_result}
+    response_data = {"genero": best_match_genre, "ano": ano, "contagem": contagem_result}
     # Grava histórico de conversa no Redis (session manager)
     try:
         user_query = f"genero={genero}, ano={ano}"
@@ -225,8 +227,10 @@ async def get_filmes_por_genero(genero: str, session_id: str):
 
     Normaliza o gênero e retorna uma lista no formato do schema `Filme`.
     """
-    normalized_genero = normalize_genre_name(genero)
-    query_string = f"sakila_rules:filmes_por_genero('{normalized_genero}', TituloFilme)"
+    best_match_genre = find_best_genre(genero)
+    if not best_match_genre:
+        raise HTTPException(status_code=404, detail=f"Gênero '{genero}' não encontrado.")
+    query_string = f"sakila_rules:filmes_por_genero('{best_match_genre}', TituloFilme)"
     results = prolog_service.query(query_string)
 
     if not results:

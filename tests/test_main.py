@@ -107,7 +107,7 @@ async def test_contar_filmes_endpoint(anyio_backend, monkeypatch: pytest.MonkeyP
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            params = {"genero": "Action", "ano": 2006}
+            params = {"genero": "action", "ano": 2006}
             params["session_id"] = "sessao_de_teste_contagem"
             resp = await client.get("/contar-filmes", params=params)
 
@@ -184,13 +184,14 @@ async def test_get_filmes_por_genero_endpoint(anyio_backend, monkeypatch: pytest
     async with LifespanManager(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get("/filmes-por-genero/Action?session_id=sessao_teste_filmes_genero")
+            # Envia a query "fuzzy" (minúscula) que a asserção espera
+            resp = await client.get("/filmes-por-genero/comedy?session_id=sessao_teste_filmes_genero")
 
     # TDD: status esperado 200 (vai falhar com 404 até implementarmos o endpoint)
     assert resp.status_code == 200
 
     # Verifica que o histórico foi salvo no Redis via serviço de sessão
-    mock_session_service.add_to_history.assert_any_call("sessao_teste_filmes_genero", "User: Action")
+    mock_session_service.add_to_history.assert_any_call("sessao_teste_filmes_genero", "User: comedy")
     mock_session_service.add_to_history.assert_any_call("sessao_teste_filmes_genero", f"Bot: {resp.json()}")
 
     data = resp.json()
