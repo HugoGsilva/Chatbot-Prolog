@@ -18,7 +18,9 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Instala dependências de TESTE (para uso do builder)
-RUN pip install pytest asgi-lifespan mysql-connector-python
+RUN python -m venv /opt/testvenv \
+ && /opt/testvenv/bin/pip install --upgrade pip \
+ && /opt/testvenv/bin/pip install pytest asgi-lifespan mysql-connector-python
 
 # --- Fase 2: Final (Produção) ---
 FROM python:3.11-slim AS final
