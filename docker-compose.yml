@@ -70,6 +70,7 @@ services:
       redis:
         condition: service_started # Garante que o Redis esteja iniciado antes do app
     environment:
+      - PYTHONUNBUFFERED=1
       - SAKILA_CONFIG=/app/backend/config/config.ini
       - SAKILA_OUTPUT=/app/prolog/knowledge/sakila_kb.pl
       - SAKILA_ERROR_LOG=/app/integrity_errors.log
