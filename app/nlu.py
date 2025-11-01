@@ -100,15 +100,32 @@ def find_best_actor(query: str) -> Optional[str]:
 
 
 def find_best_genre(query: str) -> Optional[str]:
-    """Wrapper específico para gêneros: usa a cache global de gêneros
-    carregada no startup da API para fuzzy matching.
+    """
+    Wrapper bilíngue para géneros.
+    1. Tenta um match fuzzy contra a cache PT (GENRE_CACHE_PT).
+    2. Se encontrar, traduz para EN (usando GENRE_TRANSLATION_MAP).
+    3. Se falhar, tenta um match fuzzy contra a cache EN (GENRE_CACHE) como fallback.
     """
     try:
         # Import local evita ciclo de import (main -> nlu -> main)
-        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
+        from app.main import GENRE_CACHE  # type: ignore
     except Exception:
-        GENRE_CACHE = []
-    return find_best_match(query, GENRE_CACHE)
+        GENRE_CACHE = []  # Fallback se a cache EN falhar
+
+    # Normalizar a query para comparação
+    query_upper = query.upper()
+
+    # --- Nível 1: Tentar Match em Português ---
+    best_pt_match = find_best_match(query_upper, GENRE_CACHE_PT, threshold=75)
+
+    if best_pt_match:
+        # Traduz para o nome que o Prolog espera (EN)
+        return GENRE_TRANSLATION_MAP.get(best_pt_match)
+
+    # --- Nível 2: Fallback para Match em Inglês ---
+    best_en_match = find_best_match(query_upper, GENRE_CACHE, threshold=75)
+
+    return best_en_match
 
 
 def find_best_film(query: str) -> Optional[str]:
