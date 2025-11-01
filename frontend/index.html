@@ -1,34 +1,73 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Sakila-Prolog</title>
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
+    <title>Chatbot Sakila - Versão Melhorada</title>
+    
     <link rel="stylesheet" href="/static/style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
 </head>
 <body>
-    <h1>Chatbot Sakila-Prolog</h1>
-    <div id="chat-window">
-        <div id="chat-log">
-            <p class="msg-bot">
-                <strong>Bot:</strong> Olá! Sou o Chatbot Sakila.<br>
-                Eu entendo comandos de linguagem natural, mesmo com erros de digitação simples.<br><br>
-                <b>Aqui estão alguns padrões que eu entendo:</b>
-                <ul>
-                    <li><code>filmes por [ATOR]</code><br><small>(ex: "filmes por penelope")</small></li>
-                    <li><code>recomendar por [ATOR]</code><br><small>(ex: "recomendação do penelope")</small></li>
-                    <li><code>filmes de [GENERO]</code><br><small>(ex: "filmes de action")</small></li>
-                    <li><code>genero do [FILME]</code><br><small>(ex: "genero de academy dinosaur")</small></li>
-                    <li><code>contar filmes de [GENERO] em [ANO]</code><br><small>(ex: "contar filmes de comedy em 2006")</small></li>
-                </ul>
-            </p>
-        </div>
+
+    <div class="chatbot-container">
+        
+        <header class="chatbot-header">
+            <h1>Chatbot Sakila-Prolog</h1>
+            <p>Um chatbot com NLU híbrido (Fuzzy + RegEx) e backend Prolog.</p>
+        </header>
+
+        <main class="chat-window" id="chat-window">
+            
+            <div id="chat-log">
+                
+                <div class="chat-message bot-message help-text">
+                    <p><strong>Olá! Sou o Chatbot Sakila.</strong><br>Eu entendo comandos de linguagem natural, mesmo com erros de digitação.</p>
+                    <p>Aqui estão os padrões que eu entendo:</p>
+                    <ul>
+                        <li>
+                            <strong>Pesquisar filmes por ator</strong><br>
+                            <strong>Comando:</strong> <code>filmes por [ATOR]</code> (ou <code>com ator...</code>)<br>
+                            <strong>Exemplo:</strong> <code>filmes da atriz penelope</code>
+                        </li>
+                        <li>
+                            <strong>Recomendar filmes por ator</strong><br>
+                            <strong>Comando:</strong> <code>recomendar por [ATOR]</code><br>
+                            <strong>Exemplo:</strong> <code>recomendação do penelope</code>
+                        </li>
+                        <li>
+                            <strong>Pesquisar filmes por gênero</strong><br>
+                            <strong>Comando:</strong> <code>filmes de [GENERO]</code><br>
+                            <strong>Exemplo:</strong> <code>filmes de acao</code> (ou <code>filmes de acta</code>)
+                        </li>
+                        <li>
+                            <strong>Encontrar gênero do filme</strong><br>
+                            <strong>Comando:</strong> <code>genero do [FILME]</code><br>
+                            <strong>Exemplo:</strong> <code>genero de acdemy dinosaur</code>
+                        </li>
+                        <li>
+                            <strong>Contar filmes por gênero e ano</strong><br>
+                            <strong>Comando:</strong> <code>contar filmes de [GENERO] em [ANO]</code><br>
+                            <strong>Exemplo:</strong> <code>contar filmes de comdy em 2006</code>
+                        </li>
+                    </ul>
+                </div>
+            
+            </div> </main>
+
+        <footer class="chat-input-area" id="input-container">
+            <input type="text" id="user-input" class="chat-input" placeholder="Escreva a sua mensagem...">
+            <button type="button" class="chat-submit-btn" id="send-button">Enviar</button>
+        </footer>
+
     </div>
-    <div id="input-container">
-        <input type="text" id="user-input" placeholder="Escreva a sua mensagem...">
-        <button id="send-button">Enviar</button>
-    </div>
+    
     <script src="/static/main.js"></script>
 </body>
 </html>

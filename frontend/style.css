@@ -1,113 +1,201 @@
-/* frontend/style.css */
+/* --- Configurações Globais e Variáveis --- */
+:root {
+    --bg-color: #1c1c1f;
+    --container-color: #26262b;
+    --chat-window-color: #313136;
+    --bot-message-color: #7b56d9; /* Roxo */
+    --user-message-color: #4a4a52; /* Cinza */
+    --text-color: #e8e8ed;
+    --text-secondary-color: #a0a0b0;
+    --border-color: #4a4a52;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
-    font-family: Arial, sans-serif;
-    background-color: #222;
-    color: #eee;
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-h1 {
-    color: #4CAF50; /* Verde Prolog/Sakila */
-}
-
-#chat-window {
-    width: 80%;
+/* --- Contêiner Principal (Mapeado do seu .chatbot-container) --- */
+.chatbot-container {
+    width: 100%;
     max-width: 700px;
-    height: 70vh;
-    border: 2px solid #444;
-    border-radius: 8px;
-    background-color: #333;
-    overflow-y: scroll; /* Adiciona scroll se o log for grande */
-    padding: 10px;
+    background-color: var(--container-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    height: calc(100vh - 40px);
+    max-height: 800px;
 }
 
-#chat-log {
+/* --- Cabeçalho (Mapeado do seu .chatbot-header) --- */
+.chatbot-header {
+    background-color: var(--chat-window-color);
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+.chatbot-header h1 {
+    color: var(--bot-message-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.chatbot-header p {
+    font-size: 0.9rem;
+    color: var(--text-secondary-color);
+}
+
+/* --- Janela Principal (Mapeado para #chat-window e #chat-log) --- */
+/* A nossa #chat-window é agora o seu .chat-window (o scroll) */
+#chat-window {
     flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: var(--chat-window-color);
+}
+#chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaço entre as mensagens */
 }
 
-/* Estilos para as mensagens */
-#chat-log p {
-    margin: 5px 0;
-    padding: 8px 12px;
-    border-radius: 15px;
+/* --- Mensagens de Chat (Mapeado para .msg-bot e .msg-user) --- */
+.msg-bot, .msg-user {
+    padding: 12px 18px;
+    border-radius: 18px;
     max-width: 80%;
-    line-height: 1.4;
+    line-height: 1.5;
+    /* (O main.js adiciona <p> dentro disto, então estilizamos o <p>) */
+    /* Se o <p> não for desejado, o main.js precisa ser ajustado */
 }
 
 .msg-bot {
-    background-color: #4CAF50;
-    color: #fff;
+    background-color: var(--bot-message-color);
+    color: #ffffff;
     align-self: flex-start;
-    border-bottom-left-radius: 0;
+    border-bottom-left-radius: 4px;
 }
-
 .msg-user {
-    background-color: #0084ff; /* Azul utilizador */
-    color: #fff;
+    background-color: var(--user-message-color);
+    color: var(--text-color);
     align-self: flex-end;
-    border-bottom-right-radius: 0;
+    border-bottom-right-radius: 4px;
 }
 
+/* --- Bloco de Texto de Ajuda (Mapeado do .help-text) --- */
+.help-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary-color);
+    /* Aplicamos o estilo .help-text diretamente no .bot-message no HTML */
+    background-color: rgba(0,0,0,0.1) !important; /* !important para sobrepor o roxo */
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    max-width: 95%; /* Caixa de boas-vindas pode ser maior */
+}
+.help-text p {
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-weight: 500;
+}
+.help-text ul { list-style: none; padding-left: 0; }
+.help-text li { margin-bottom: 12px; line-height: 1.6; }
+.help-text li strong { color: var(--text-color); }
+
+/* Estilo para os <code> (do seu CSS) */
+code {
+    background-color: rgba(0, 0, 0, 0.35);
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-family: 'Roboto Mono', Courier, monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #70d1ff; /* Ciano "Tech" */
+}
+
+/* --- Área de Input (Mapeado para #input-container) --- */
 #input-container {
+    border-top: 1px solid var(--border-color);
+    padding: 15px;
+    background-color: var(--container-color);
     display: flex;
-    width: 80%;
-    max-width: 700px;
-    margin-top: 15px;
+    gap: 10px;
 }
 
+/* Mapeado para #user-input */
 #user-input {
     flex-grow: 1;
-    padding: 10px;
-    border: 2px solid #444;
-    border-radius: 5px;
-    background-color: #555;
-    color: #eee;
-    font-size: 1em;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    background-color: var(--chat-window-color);
+    color: var(--text-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+#user-input:focus {
+    outline: none;
+    border-color: var(--bot-message-color);
+    box-shadow: 0 0 0 2px rgba(123, 86, 217, 0.3); /* Sombra Roxa */
 }
 
+/* Mapeado para #send-button */
 #send-button {
-    padding: 10px 20px;
-    margin-left: 10px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 5px;
-    background-color: #4CAF50;
+    background-color: var(--bot-message-color);
     color: white;
-    font-size: 1em;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
-
 #send-button:hover {
-    background-color: #45a049;
+    background-color: #6a44c2; /* Roxo mais escuro */
 }
 
-/* Estilos para a lista de comandos na UI */
-.msg-bot ul {
-    margin-top: 10px;
-    margin-bottom: 5px;
-    padding-left: 25px;
+/* --- Scrollbar (Do seu CSS) --- */
+#chat-window::-webkit-scrollbar { width: 8px; }
+#chat-window::-webkit-scrollbar-track { background: var(--chat-window-color); }
+#chat-window::-webkit-scrollbar-thumb { background-color: var(--user-message-color); border-radius: 4px; }
+#chat-window::-webkit-scrollbar-thumb:hover { background-color: #6a6a7a; }
+
+
+/* ... (código anterior do style.css) ... */
+
+/* --- Mensagens de Chat --- */
+.chat-message {
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 80%;
+    line-height: 1.5;
 }
-.msg-bot li {
-    margin-bottom: 15px; /* Mais espaço entre os itens */
-    line-height: 1.5;   /* Mais espaço entre as linhas */
+
+.bot-message {
+    background-color: var(--bot-message-color);
+    color: #ffffff;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--bot-message-color); /* ADICIONADO: Borda roxa para o bot */
 }
-.msg-bot code {
-    background-color: #2a2a2a; /* Um cinza um pouco mais escuro */
-    padding: 3px 7px; /* Ligeiramente maior */
-    border-radius: 4px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1.05em; /* Ligeiramente maior */
-    color: #f0f0f0;
-    font-weight: bold;
+
+.user-message {
+    background-color: var(--user-message-color);
+    color: var(--text-color);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    border: 1px solid #70d1ff; /* ADICIONADO: Borda ciano claro para o usuário (a mesma do código) */
 }
-.msg-bot small {
-    color: #ccc; /* Cor mais clara */
-    font-style: normal; /* Remover itálico para legibilidade */
-    margin-left: 5px;
-    font-size: 0.95em; /* Ligeiramente maior */
-}
+
+/* ... (resto do style.css continua inalterado) ... */
