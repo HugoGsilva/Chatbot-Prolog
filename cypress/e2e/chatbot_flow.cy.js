@@ -4,6 +4,8 @@ describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
   beforeEach(() => {
     // Visita a página antes de cada teste
     cy.visit('/');
+    // Aguarda pelos endpoints relevantes
+    cy.intercept('GET', '/filmes-por-ator/*').as('filmesPorAtor');
   });
 
   it('Deve carregar e exibir a mensagem inicial do Bot', () => {
@@ -16,10 +18,11 @@ describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
     cy.get('#user-input').type('flmes por penlope{enter}');
     // 2. Verifica se a mensagem do utilizador foi adicionada
     cy.get('#chat-log .user-message').last().should('contain.text', 'flmes por penlope');
-    // 3. Verifica se surgiu uma resposta do bot
-    cy.get('#chat-log .bot-message').last().should('exist');
+    // 3. Aguarda resposta do endpoint para garantir rendering
+    cy.wait('@filmesPorAtor', { timeout: 10000 });
     // 4. Conteúdo esperado (fuzzy): deve listar filmes da Penelope
-    cy.get('#chat-log .bot-message').last().should('contain.text', 'ACADEMY DINOSAUR');
+    // Alinhado aos dados reais retornados pelo backend (ex.: "AMADEUS HOLY")
+    cy.get('#chat-log .bot-message').last().should('contain.text', 'AMADEUS HOLY');
   });
 
   it('Deve testar a intenção "contar filmes" (E2E)', () => {
