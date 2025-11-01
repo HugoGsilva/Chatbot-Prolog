@@ -9,6 +9,33 @@ from thefuzz import process
 
 from typing import Optional
 
+# ---------------------------------------------------------------------------
+# Tradução PT-BR de Géneros
+# ---------------------------------------------------------------------------
+# Mapeia a forma PT (normalizada/maiúscula) para a forma EN (que o Prolog espera)
+GENRE_TRANSLATION_MAP = {
+    "AÇÃO": "Action",
+    "ANIMAÇÃO": "Animation",
+    "INFANTIL": "Children",
+    "CLÁSSICOS": "Classics",
+    "COMÉDIA": "Comedy",
+    "DOCUMENTÁRIO": "Documentary",
+    "DRAMA": "Drama",
+    "FAMÍLIA": "Family",
+    "ESTRANGEIRO": "Foreign",
+    "JOGOS": "Games",
+    "TERROR": "Horror",
+    "MÚSICA": "Music",
+    "NOVO": "New",
+    "FICÇÃO CIENTÍFICA": "Sci-Fi",
+    "DESPORTO": "Sports",
+    "VIAGEM": "Travel",
+}
+
+# Criamos uma cache SÓ com as chaves em Português para o fuzzy matching
+# Resultado: ["AÇÃO", "ANIMAÇÃO", "INFANTIL", ...]
+GENRE_CACHE_PT = list(GENRE_TRANSLATION_MAP.keys())
+
 def normalize_actor_name(name: str) -> str:
     """Normaliza o nome do ator para o formato esperado pelo Prolog.
 
