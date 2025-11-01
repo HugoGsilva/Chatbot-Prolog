@@ -10,33 +10,46 @@ document.addEventListener('DOMContentLoaded', () => {
   const intentPrototypes = [
     {
       phrase: "contar filmes de GENERO em ANO",
-      // Procura por "de [genero] em [ano]" (permite "contar flmes de...")
+      // SOLTO: Procura apenas "...de [entidade] em [ano]"
+      // O Fuse.js tratará de "contar", "contar filmes", "cntar flmes", etc.
       regex: /de\s+(.+)\s+em\s+(\d{4})$/i,
       template: (matches) => `/contar-filmes?genero=${encodeURIComponent(matches[1])}&ano=${matches[2]}`
     },
     {
       phrase: "recomendar com base em ATOR",
-      // Este RegEx aceita várias formas de pedir recomendação
-      regex: /(com\s+base\s+em|baseado\s+em|do|de|pelo)\s+(.+)$/i,
-      template: (matches) => `/recomendar-por-ator/${encodeURIComponent(matches[2])}`
+      // SOLTO: Procura "...(palavra-chave) [entidade]"
+      // Aceita "do ator", "da atriz", "pelo", etc.
+      regex: /(com\s+base\s+em|baseado\s+em|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
+      template: (matches) => `/recomendar-por-ator/${encodeURIComponent(matches[3])}`
     },
     {
       phrase: "filmes por ATOR",
-      // Este RegEx aceita "filmes por/do/de/pelo" e "filme" (singular)
-      regex: /(por|do|de|pelo)\s+(.+)$/i,
+      // SOLTO: Procura "...(palavra-chave) [entidade]" (inclui "da atriz")
+      // O Fuse.js tratará de "filme por", "filmes por", "flmes por", etc.
+      regex: /(por|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
+      template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}`
+    },
+    // --- NOVA INTENÇÃO ADICIONADA ---
+    {
+      phrase: "filme com ator ATOR",
+      // SOLTO: Procura "...com (ator|atriz) [entidade]"
+      // O Fuse.js tratará de "filme com" ou "filmes com"
+      regex: /com\s+(ator|atriz)\s+(.+)$/i,
       template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[2])}`
     },
+    // --- FIM DA NOVA INTENÇÃO ---
     {
       phrase: "gênero do FILME",
-      // Procura por "...do/de [filme]"
+      // SOLTO: Procura "...(do|de) [entidade]"
+      // O Fuse.js tratará de "gênero do", "genero de", etc.
       regex: /(do|de)\s+(.+)$/i,
       template: (matches) => `/genero-do-filme/${encodeURIComponent(matches[2])}`
     },
     {
       phrase: "filmes de GENERO",
-      // Este RegEx aceita "filme de" (singular)
-      // NOTA: É muito parecido com "filmes por ATOR", mas o fuzzy matching vai ajudar
-      regex: /filmes?\s+de\s+(.+)$/i,
+      // SOLTO: Procura "...de [entidade]" (e garante que não é "de [ator/atriz]")
+      // O Fuse.js tratará de "filme de", "filmes de", "flmes de", etc.
+      regex: /de\s+(?!ator\s|atriz\s)(.+)$/i, // (?!...) é um "negative lookahead"
       template: (matches) => `/filmes-por-genero/${encodeURIComponent(matches[1])}`
     }
   ];
