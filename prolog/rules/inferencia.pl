@@ -22,7 +22,7 @@
 
 % Importa o módulo de fatos pelo caminho relativo correto
 :- if(\+ current_module(sakila_facts)).
-:- use_module('../knowledge/sakila.pl').
+:- use_module('../knowledge/sakila_kb.pl').
 :- endif.
 
 % ---------------------------------------------------------------------------

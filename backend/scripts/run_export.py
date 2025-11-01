@@ -135,6 +135,39 @@ class FactWriter:
             pass
 
 
+# Cabeçalho de módulo para o dataset COMPLETO (produção)
+PROLOG_MODULE_HEADER = """
+/**
+ * Módulo de Fatos Sakila (Gerado Automaticamente)
+ *
+ * Este módulo contém dados (fatos) completos do domínio Sakila,
+ * gerados pelo script run_export.py.
+ */
+ :- module(sakila_facts, [
+     actor/2,
+     film/5,
+     acted_in/2,
+     category/2,
+     film_category/2
+ ]).
+"""
+
+
+class HeaderFactWriter(FactWriter):
+    """Extensão que escreve cabeçalho de módulo ao abrir o arquivo."""
+
+    def __init__(self, filepath: str) -> None:
+        super().__init__(filepath)
+        self.write_header()
+
+    def write_header(self) -> None:
+        try:
+            self._fp.write(PROLOG_MODULE_HEADER.strip() + "\n\n")
+            self._fp.flush()
+        except Exception:
+            pass
+
+
 class ReferentialIntegrityChecker:
     """Carrega e valida integridade referencial entre tabelas Sakila."""
 
@@ -358,7 +391,7 @@ def main():
 
     try:
         db = DatabaseConnector(config_path)
-        writer = FactWriter(output_path)
+        writer = HeaderFactWriter(output_path)
         exporter = SakilaExporter(db, writer)
         exporter.run_export()
         print(f"Arquivo gerado em: {output_path}")
