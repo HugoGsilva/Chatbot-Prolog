@@ -40,7 +40,7 @@ def normalize_film_title(title: str) -> str:
 # Fuzzy Matching Helpers
 # ---------------------------------------------------------------------------
 
-def find_best_match(query: str, cache: list[str], threshold: int = 80) -> Optional[str]:
+def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Optional[str]:
     """Retorna o melhor match para `query` dentro de `cache` se a pontuação
     atingir o `threshold`; caso contrário, retorna None.
 
