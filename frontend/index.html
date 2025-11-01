@@ -5,12 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Sakila-Prolog</title>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <h1>Chatbot Sakila-Prolog</h1>
     <div id="chat-window">
         <div id="chat-log">
-            <p><strong>Bot:</strong> Olá! Pergunte-me sobre filmes.</p>
+            <p class="msg-bot">
+                <strong>Bot:</strong> Olá! Sou o Chatbot Sakila.<br>
+                Eu entendo comandos de linguagem natural, mesmo com erros de digitação simples.<br><br>
+                <b>Aqui estão alguns padrões que eu entendo:</b>
+                <ul>
+                    <li><code>filmes por [ATOR]</code><br><small>(ex: "filmes por penelope")</small></li>
+                    <li><code>recomendar por [ATOR]</code><br><small>(ex: "recomendação do penelope")</small></li>
+                    <li><code>filmes de [GENERO]</code><br><small>(ex: "filmes de action")</small></li>
+                    <li><code>genero do [FILME]</code><br><small>(ex: "genero de academy dinosaur")</small></li>
+                    <li><code>contar filmes de [GENERO] em [ANO]</code><br><small>(ex: "contar filmes de comedy em 2006")</small></li>
+                </ul>
+            </p>
         </div>
     </div>
     <div id="input-container">

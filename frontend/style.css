@@ -1,0 +1,113 @@
+/* frontend/style.css */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #222;
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+h1 {
+    color: #4CAF50; /* Verde Prolog/Sakila */
+}
+
+#chat-window {
+    width: 80%;
+    max-width: 700px;
+    height: 70vh;
+    border: 2px solid #444;
+    border-radius: 8px;
+    background-color: #333;
+    overflow-y: scroll; /* Adiciona scroll se o log for grande */
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+#chat-log {
+    flex-grow: 1;
+}
+
+/* Estilos para as mensagens */
+#chat-log p {
+    margin: 5px 0;
+    padding: 8px 12px;
+    border-radius: 15px;
+    max-width: 80%;
+    line-height: 1.4;
+}
+
+.msg-bot {
+    background-color: #4CAF50;
+    color: #fff;
+    align-self: flex-start;
+    border-bottom-left-radius: 0;
+}
+
+.msg-user {
+    background-color: #0084ff; /* Azul utilizador */
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 0;
+}
+
+#input-container {
+    display: flex;
+    width: 80%;
+    max-width: 700px;
+    margin-top: 15px;
+}
+
+#user-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 2px solid #444;
+    border-radius: 5px;
+    background-color: #555;
+    color: #eee;
+    font-size: 1em;
+}
+
+#send-button {
+    padding: 10px 20px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+#send-button:hover {
+    background-color: #45a049;
+}
+
+/* Estilos para a lista de comandos na UI */
+.msg-bot ul {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    padding-left: 25px;
+}
+.msg-bot li {
+    margin-bottom: 15px; /* Mais espaço entre os itens */
+    line-height: 1.5;   /* Mais espaço entre as linhas */
+}
+.msg-bot code {
+    background-color: #2a2a2a; /* Um cinza um pouco mais escuro */
+    padding: 3px 7px; /* Ligeiramente maior */
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.05em; /* Ligeiramente maior */
+    color: #f0f0f0;
+    font-weight: bold;
+}
+.msg-bot small {
+    color: #ccc; /* Cor mais clara */
+    font-style: normal; /* Remover itálico para legibilidade */
+    margin-left: 5px;
+    font-size: 0.95em; /* Ligeiramente maior */
+}

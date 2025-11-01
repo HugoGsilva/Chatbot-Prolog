@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function displayMessage(sender, message) {
     const p = document.createElement('p');
+    p.classList.add(sender === 'User' ? 'msg-user' : 'msg-bot');
     const strong = document.createElement('strong');
     strong.textContent = sender + ': ';
     p.appendChild(strong);
@@ -138,8 +139,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const resp = await fetch(url);
       if (!resp.ok) {
+        let errorMsg = `Erro ${resp.status}.`;
         const errText = await resp.text();
-        displayMessage('Bot', `Erro ${resp.status}: ${errText}`);
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson && errJson.detail) {
+            errorMsg = `Desculpe: ${errJson.detail}`;
+          } else {
+            errorMsg = errText;
+          }
+        } catch (e) {
+          errorMsg = `Ocorreu um erro no servidor (Erro ${resp.status}).`;
+        }
+        displayMessage('Bot', errorMsg);
         return;
       }
       const data = await resp.json();
