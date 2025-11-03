@@ -1,5 +1,6 @@
+# Dependências de Produção da API (Serviço 'app')
 fastapi
-uvicorn
+uvicorn[standard]
 pyswip
 redis
 thefuzz[speedup]

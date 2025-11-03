@@ -1,0 +1,6 @@
+# Dependências do Pipeline ETL (Serviço 'db-init')
+pandas
+sqlalchemy
+mysql-connector-python
+pyswip
+redis
