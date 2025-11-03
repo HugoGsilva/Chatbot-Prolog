@@ -1,0 +1,4 @@
+show_id,type,title,director,cast,country,date_added,release_year,rating,duration,listed_in,description
+s1,Movie,Sample Film,Jane Doe,"Actor A, Actor B",United States,"January 1, 2020",2020,PG,"90 min","Comedy, Drama","A sample description"
+s2,TV Show,Another Title,John Smith,"Actor C, Actor D",United Kingdom,"February 15, 2019",2019,TV-14,"2 Seasons","Action, Thriller","Another description"
+s3,Movie,Romantic Story,Maria Silva,"Actor E",Brazil,"March 10, 2021",2021,PG-13,"105 min","Romance, Comedy","A romantic comedy set in Brazil"

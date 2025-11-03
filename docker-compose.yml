@@ -1,112 +1,96 @@
-# A propriedade 'version' foi removida conforme aviso de log (é obsoleta).
-
 services:
-  # 1. Serviço MySQL (Banco de Dados Sakila)
   mysql:
     image: mysql:8.0
     container_name: sakila-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "1234"
-      MYSQL_DATABASE: "sakila"
-    # CORREÇÃO (Erro 1): Mapeia a porta 3307 do Host para a 3306 do Contêiner
-    # para evitar conflito com qualquer MySQL local rodando na 3306.
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: moviedb # (Mudámos de 'sakila' para 'moviedb')
+    volumes:
+      # (O 'db-init' agora trata disto, mas podemos manter se quisermos logs)
+      - mysql_data:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "3307:3306" # Evita conflito com MySQL local na porta 3306
     healthcheck:
-      # O healthcheck original estava correto.
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    volumes:
-      - mysql_data:/var/lib/mysql
-    # CORREÇÃO (Erro 5): Adiciona o MySQL à mesma rede dos outros serviços.
+      retries: 10
     networks:
-      - sakila-network
+      - chatbot-network
 
-  # 2. Serviço de Inicialização do Banco
-  # 2. Serviço de Inicialização do Banco
-  # 2. Serviço de Inicialização do Banco
-  db-init:
-    # CORREÇÃO: Usamos a imagem mysql:8.0.
-    # Ela já contém os clientes 'mysql' e 'mysqladmin' compatíveis.
-    image: mysql:8.0
-    container_name: sakila-db-init
-    depends_on:
-      mysql:
-        condition: service_healthy # Espera o healthcheck do mysql passar
-    volumes:
-      - ./db/init:/init:ro
-      
-    # CORREÇÃO: Sobrescrevemos o comando padrão da imagem (que seria
-    # iniciar um servidor) pelo nosso script de importação.
-    command: >
-      sh -c "
-        echo 'Waiting for MySQL (using mysql:8.0 client)...';
-        
-        until mysqladmin --host=mysql --user=root --password=1234 ping --silent; do
-          echo '...still waiting for connection...';
-          sleep 2;
-        done;
-        
-        echo 'Importing schema...';
-        mysql -h mysql -u root -p1234 sakila < /init/sakila-schema.sql;
-        echo 'Importing data...';
-        mysql -h mysql -u root -p1234 sakila < /init/sakila-data.sql;
-        echo 'DB Init complete.';
-      "
-    networks:
-      - sakila-network
-
-  # 3. Serviço da Aplicação Python (App)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: prologue-app
-    depends_on:
-      db-init:
-        condition: service_completed_successfully # Roda após o db-init
-      redis:
-        condition: service_started # Garante que o Redis esteja iniciado antes do app
-    environment:
-      - PYTHONUNBUFFERED=1
-      - SAKILA_CONFIG=/app/backend/config/config.ini
-      - SAKILA_OUTPUT=/app/prolog/knowledge/sakila_kb.pl
-      - SAKILA_ERROR_LOG=/app/integrity_errors.log
-    ports:
-      - "8000:8000"
-      
-    # CORREÇÃO (Contexto): Monta o repositório inteiro (.), não apenas ./app.
-    # Isso é necessário para o pytest encontrar /tests e o script encontrar /backend.
-    volumes:
-      - .:/app
-      
-    # CORREÇÃO (Erro 4): Remove o 'command: uvicorn...'
-    # Seu contexto original diz que o Dockerfile define o CMD como ["pytest", "-q"].
-    # Ao remover o 'command' daqui, o Docker Compose usará o CMD padrão do Dockerfile.
-    # Isso resolve o 'ModuleNotFoundError: No module named 'app''.
-    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    
-    working_dir: /app
-    networks:
-      - sakila-network
-
-  # 4. Serviço Redis (presente nos requisitos)
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
+    # [FIX 2] Adiciona um healthcheck para o Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
     networks:
-      - sakila-network
+      - chatbot-network
 
-# Definição da rede customizada
+  db-init:
+    # [FIX 1] Usa 'build' em vez de 'image'
+    # (Isto aponta para o Dockerfile.db-init que vamos criar na Fase 1.3)
+    build:
+      context: .
+      dockerfile: data_netflix/Dockerfile.db-init
+    container_name: imdb-etl-pipeline
+    # [FIX 1] O comando que vamos criar na Fase 1.4
+    command: python data_imdb/run_pipeline.py
+
+    # [FIX 1] Montagem de volume "cirúrgica"
+    # Monta APENAS o diretório de output (knowledge)
+    # E o diretório de input (data_imdb)
+    volumes:
+      - ./prolog/knowledge:/app/prolog/knowledge
+      - ./data_imdb:/app/data_imdb
+
+    # [FIX 2] O ETL DEVE esperar que as bases de dados estejam PRONTAS
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile # (O Dockerfile multi-stage principal)
+    container_name: prologue-app
+
+    # [FIX 1 e 2] A CORREÇÃO CRÍTICA:
+    # O 'app' SÓ DEVE arrancar DEPOIS que o 'db-init' (ETL) terminar.
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      # (Ainda depende do mysql/redis para o runtime normal)
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      # (Removidas as vars de config do Sakila que já não são necessárias)
+    volumes:
+      # (Montagem de volume "cirúrgica" para desenvolvimento)
+      - ./app:/app/app
+      - ./prolog:/app/prolog
+      - ./frontend:/app/frontend
+    ports:
+      - "8000:8000"
+    networks:
+      - chatbot-network
+
 networks:
-  sakila-network:
+  chatbot-network:
     driver: bridge
 
-# Definição do volume persistente do MySQL
 volumes:
-  mysql_data:
-    driver: local
+  mysql_data: # (Volume persistente para o MySQL)

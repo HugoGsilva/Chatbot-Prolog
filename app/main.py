@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+import json
 import os
 from .schemas import Filme, ContagemGenero, Genero
 from .nlu import find_best_actor, find_best_genre, find_best_film
@@ -71,6 +72,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[WARN] Falha ao conectar no Redis: {e}")
     print("Motor Prolog carregado.")
+
+    # Tentar carregar caches NLU a partir do Redis (geradas pelo db-init)
+    try:
+        actors_json = await session_service.client.get("nlu_actors_cache")
+        genres_json = await session_service.client.get("nlu_genres_cache")
+        films_json = await session_service.client.get("nlu_films_cache")
+
+        # Se existirem, substituem as caches carregadas do Prolog
+        if actors_json:
+            ACTOR_CACHE = json.loads(actors_json)
+        if genres_json:
+            GENRE_CACHE = json.loads(genres_json)
+        if films_json:
+            FILM_CACHE = json.loads(films_json)
+        if actors_json or genres_json or films_json:
+            print("[Cache] Caches NLU carregadas do Redis.")
+    except Exception as e:
+        print(f"[WARN] Falha ao carregar caches NLU do Redis: {e}")
 
     yield
 
