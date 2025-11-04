@@ -2,15 +2,14 @@
 describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
 
   beforeEach(() => {
-    // Visita a página antes de cada teste
     cy.visit('/');
-    // Aguarda pelos endpoints relevantes
     cy.intercept('GET', '/filmes-por-ator/*').as('filmesPorAtor');
     cy.intercept('GET', '/genero-do-filme/*').as('generoDoFilme');
     cy.intercept('GET', '/filmes-por-genero/*').as('filmesPorGenero');
     cy.intercept('GET', '/contar-filmes*').as('contarFilmes');
     cy.intercept('GET', '/recomendar/ator-e-genero*').as('atorEGenero');
     cy.intercept('GET', '/recomendar/dois-generos*').as('doisGeneros');
+    cy.intercept('GET', '/filmes-por-diretor/*').as('filmesPorDiretor');
   });
 
   it('Deve carregar e exibir a mensagem inicial do Bot', () => {
@@ -101,5 +100,21 @@ describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
 
     // Verifica se o bot respondeu com o filme esperado (ajustado ao dataset)
     cy.get('#chat-log .bot-message').last().should('contain.text', 'Uncut Gems');
+  });
+
+  it('Deve testar a intenção "filmes por diretor" (E2E)', () => {
+    const query = 'filmes do diretor quentin tarantino';
+
+    cy.get('#user-input').type(`${query}{enter}`);
+    cy.wait('@filmesPorDiretor', { timeout: 10000 });
+
+    // Verifica se a query do utilizador apareceu
+    cy.get('#chat-log .user-message').last().should('contain.text', query);
+
+    // Verifica se o bot respondeu listando pelo menos um filme do Tarantino
+    cy.get('#chat-log .bot-message').last().should(($el) => {
+      const txt = $el.text();
+      expect(/Pulp Fiction|Django Unchained|Inglourious Basterds|Jackie Brown|Kill Bill: Vol\. 1|Kill Bill: Vol\. 2|The Hateful Eight/i.test(txt)).to.be.true;
+    });
   });
 });
