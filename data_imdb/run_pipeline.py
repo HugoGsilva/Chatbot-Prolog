@@ -156,9 +156,13 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
     # Escrever ficheiro Prolog
     print(f"[Pipeline] A escrever {len(all_facts)} factos em {prolog_path}...")
     with open(prolog_path, "w", encoding="utf-8") as f:
-        f.write(
-            ":- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2]).\n\n"
-        )
+        f.write(":- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2]).\n\n")
+
+        # [FIX] Diz ao Prolog que sabemos que os factos estão intercalados
+        f.write(":- discontiguous(netflix_title/3).\n")
+        f.write(":- discontiguous(netflix_genre/2).\n")
+        f.write(":- discontiguous(netflix_actor/2).\n\n")
+
         f.write("\n".join(all_facts))
     print("[Pipeline] Ficheiro de factos Prolog gerado.")
 
