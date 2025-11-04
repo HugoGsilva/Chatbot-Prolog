@@ -8,6 +8,13 @@ correspondência usando thefuzz contra caches carregadas no startup.
 from thefuzz import process
 
 from typing import Optional
+import json
+
+# --- CACHES NLU GLOBAIS ---
+# (Definidas aqui, mas populadas pelo main.py no startup)
+ACTOR_CACHE: list[str] = []
+GENRE_CACHE: list[str] = []
+FILM_CACHE: list[str] = []
 
 # ---------------------------------------------------------------------------
 # Tradução PT-BR de Géneros
@@ -86,16 +93,8 @@ def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Option
 
 
 def find_best_actor(query: str) -> Optional[str]:
-    """Wrapper específico para atores: consulta a cache global de atores
-    carregada no startup da API.
-
-    Observação: usa import local para evitar ciclo de importação com `app.main`.
-    """
-    try:
-        # Import local evita ciclo de import (main -> nlu -> main)
-        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
-    except Exception:
-        ACTOR_CACHE = []  # fallback quando cache não estiver disponível
+    """Wrapper específico para atores: consulta a cache global de atores."""
+    # Usa a ACTOR_CACHE global definida neste ficheiro
     return find_best_match(query, ACTOR_CACHE)
 
 
@@ -106,12 +105,6 @@ def find_best_genre(query: str) -> Optional[str]:
     2. Se encontrar, traduz para EN (usando GENRE_TRANSLATION_MAP).
     3. Se falhar, tenta um match fuzzy contra a cache EN (GENRE_CACHE) como fallback.
     """
-    try:
-        # Import local evita ciclo de import (main -> nlu -> main)
-        from app.main import GENRE_CACHE  # type: ignore
-    except Exception:
-        GENRE_CACHE = []  # Fallback se a cache EN falhar
-
     # Normalizar a query para comparação
     query_upper = query.upper()
 
@@ -123,6 +116,7 @@ def find_best_genre(query: str) -> Optional[str]:
         return GENRE_TRANSLATION_MAP.get(best_pt_match)
 
     # --- Nível 2: Fallback para Match em Inglês ---
+    # Usa a GENRE_CACHE global definida neste ficheiro
     best_en_match = find_best_match(query_upper, GENRE_CACHE, threshold=75)
 
     return best_en_match
@@ -132,9 +126,5 @@ def find_best_film(query: str) -> Optional[str]:
     """Wrapper específico para títulos de filmes: usa a cache global de
     títulos carregada no startup da API para fuzzy matching.
     """
-    try:
-        # Import local evita ciclo de import (main -> nlu -> main)
-        from app.main import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE  # type: ignore
-    except Exception:
-        FILM_CACHE = []
+    # Usa a FILM_CACHE global definida neste ficheiro
     return find_best_match(query, FILM_CACHE)

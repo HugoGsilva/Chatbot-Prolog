@@ -1,122 +1,65 @@
-/**
- * Módulo de Regras Sakila
- *
- * Este módulo define regras de inferência que operam sobre os
- * fatos expostos pelo módulo sakila_facts.
- *
- * Regras exportadas (consultadas pela API Python):
- * - filmes_por_ator/2
- * - genero_do_filme/2
- * - filmes_por_genero/2
- */
-:- module(sakila_rules, [
+% --- MÓDULO E CARREGAMENTO DE FACTOS (V2) ---
+
+% (Mudamos o nome do módulo para evitar conflitos,
+% e exportamos as novas regras)
+:- module(imdb_rules, [
     filmes_por_ator/2,
-    genero_do_filme/2,
     filmes_por_genero/2,
-    recomendar_por_ator/2,
+    genero_do_filme/2,
     contar_filmes_por_genero_e_ano/3,
-    get_all_actors/1,
-    get_all_genres/1,
-    get_all_films/1
+
+    % As novas regras de recomendação (o seu pedido)
+    recomendar_por_ator_e_genero/3,
+    recomendar_por_dois_generos/3
+
+    % (As regras 'get_all_...' já não são necessárias aqui,
+    % pois o pipeline ETL (Fase 1) trata disso)
 ]).
 
-% Importa o módulo de fatos pelo caminho relativo correto
-:- if(\+ current_module(sakila_facts)).
-:- use_module('../knowledge/sakila_kb.pl').
-:- endif.
+% Carrega os novos factos (gerados pelo pipeline ETL)
+:- use_module('../knowledge/imdb_kb.pl').
 
-% ---------------------------------------------------------------------------
-% Implementações das regras de consulta básicas
-% Observação: estas regras operam sobre os fatos expostos pelo módulo sakila_facts.
-% ---------------------------------------------------------------------------
+% --- REGRAS DE INFERÊNCIA (V2) ---
+% (Reescritas para usar o schema netflix_.../...)
 
-% filmes_por_ator(NomeAtor, TituloFilme)
-% Sucede se o ator com nome NomeAtor atuou no filme com título TituloFilme.
+% filmes_por_ator(+NomeAtor, -TituloFilme)
+% (Assume que NomeAtor já foi resolvido pelo NLU Nível 2)
 filmes_por_ator(NomeAtor, TituloFilme) :-
-    sakila_facts:actor(ActorID, NomeAtor),
-    sakila_facts:acted_in(ActorID, FilmID),
-    sakila_facts:film(FilmID, TituloFilme, _, _, _).
+    imdb_kb:netflix_actor(ShowID, NomeAtor),
+    imdb_kb:netflix_title(ShowID, TituloFilme, _).
 
-% genero_do_filme(TituloFilme, NomeGenero)
-% Sucede se o filme com título TituloFilme pertence ao gênero NomeGenero.
-genero_do_filme(TituloFilme, NomeGenero) :-
-    sakila_facts:film(FilmID, TituloFilme, _, _, _),
-    sakila_facts:film_category(FilmID, CategoryID),
-    sakila_facts:category(CategoryID, NomeGenero).
-
-% filmes_por_genero(NomeGenero, TituloFilme)
-% Sucede se o gênero NomeGenero contém o filme com título TituloFilme.
+% filmes_por_genero(+NomeGenero, -TituloFilme)
+% (Assume que NomeGenero já foi resolvido pelo NLU Nível 2)
 filmes_por_genero(NomeGenero, TituloFilme) :-
-    sakila_facts:category(CategoryID, NomeGenero),
-    sakila_facts:film_category(FilmID, CategoryID),
-    sakila_facts:film(FilmID, TituloFilme, _, _, _).
+    imdb_kb:netflix_genre(ShowID, NomeGenero),
+    imdb_kb:netflix_title(ShowID, TituloFilme, _).
 
-% ---------------------------------------------------------------------------
-% Regra de recomendação baseada em gênero/ator
-% recomendar_por_ator(NomeAtor, FilmeRecomendado)
-% Sucede se FilmeRecomendado for diferente de um filme (FilmeOriginal)
-% que o ator NomeAtor estrelou, mas compartilha um gênero com FilmeOriginal,
-% e o ator NomeAtor não atuou em FilmeRecomendado.
-% ---------------------------------------------------------------------------
+% genero_do_filme(+TituloFilme, -NomeGenero)
+% (Assume que TituloFilme já foi resolvido pelo NLU Nível 2)
+genero_do_filme(TituloFilme, NomeGenero) :-
+    imdb_kb:netflix_title(ShowID, TituloFilme, _),
+    imdb_kb:netflix_genre(ShowID, NomeGenero).
 
-recomendar_por_ator(NomeAtor, FilmeRecomendado) :-
-    % Encontra um filme original em que o ator atuou
-    filmes_por_ator(NomeAtor, FilmeOriginal),
-    % Determina o gênero do filme original
-    genero_do_filme(FilmeOriginal, Genero),
-    % Busca filmes do mesmo gênero
-    filmes_por_genero(Genero, FilmeRecomendado),
-    % Filtro: filme recomendado deve ser diferente do original
-    FilmeRecomendado \= FilmeOriginal,
-    % Filtro: ator não atuou no filme recomendado
-    \+ filmes_por_ator(NomeAtor, FilmeRecomendado).
-
-% ---------------------------------------------------------------------------
-% Regra de agregação: contagem de filmes por gênero e ano
-% contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem)
-% Sucede unificando Contagem com o número total de filmes que pertencem
-% ao gênero NomeGenero e foram lançados no ano Ano.
-% ---------------------------------------------------------------------------
-
-% Regra auxiliar (não exportada): determina se um filme pertence ao gênero e ano.
-filme_do_genero_e_ano(NomeGenero, Ano, TituloFilme) :-
-    sakila_facts:category(CategoryID, NomeGenero),
-    sakila_facts:film_category(FilmID, CategoryID),
-    sakila_facts:film(FilmID, TituloFilme, _, Ano, _).
-
-% Regra principal de contagem usando agregação com findall/3 + length/2.
+% contar_filmes_por_genero_e_ano(+NomeGenero, +Ano, -Contagem)
 contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
-    findall(TituloFilme,
-            filme_do_genero_e_ano(NomeGenero, Ano, TituloFilme),
-            ListaDeFilmes),
-    length(ListaDeFilmes, Contagem).
+    findall(
+        T,
+        (
+            imdb_kb:netflix_genre(ShowID, NomeGenero),
+            imdb_kb:netflix_title(ShowID, T, Ano)
+        ),
+        Titulos
+    ),
+    length(Titulos, Contagem).
 
-% ---------------------------------------------------------------------------
-% Regra utilitária: lista de todos os atores (ordenada e sem duplicados)
-% get_all_actors(-ListaNomes)
-% Retorna uma lista ordenada e única de todos os nomes de atores.
-% Implementação robusta: findall/3 + sort/2 evita erros de contexto ($bags)
-% observados com setof/3 em alguns cenários de qualificação de módulo.
-% ---------------------------------------------------------------------------
-get_all_actors(ListaNomes) :-
-    findall(Nome, sakila_facts:actor(_, Nome), Nomes),
-    sort(Nomes, ListaNomes).
+% --- NOVAS REGRAS DE RECOMENDAÇÃO (O SEU PEDIDO) ---
 
-% ---------------------------------------------------------------------------
-% Regras utilitárias: listas de todos os gêneros e filmes
-% get_all_genres(-ListaGeneros)
-% Retorna uma lista ordenada e única de todos os nomes de gêneros.
-% Implementação robusta: findall/3 + sort/2
-% ---------------------------------------------------------------------------
-get_all_genres(ListaGeneros) :-
-    findall(Nome, sakila_facts:category(_, Nome), Nomes),
-    sort(Nomes, ListaGeneros).
+% recomendar_por_ator_e_genero(+NomeAtor, +NomeGenero, -TituloFilme)
+recomendar_por_ator_e_genero(NomeAtor, NomeGenero, TituloFilme) :-
+    filmes_por_ator(NomeAtor, TituloFilme),
+    filmes_por_genero(NomeGenero, TituloFilme).
 
-% ---------------------------------------------------------------------------
-% get_all_films(-ListaTitulos)
-% Retorna uma lista ordenada e única de todos os títulos de filmes.
-% Implementação robusta: findall/3 + sort/2
-% ---------------------------------------------------------------------------
-get_all_films(ListaTitulos) :-
-    findall(Titulo, sakila_facts:film(_, Titulo, _, _, _), Titulos),
-    sort(Titulos, ListaTitulos).
+% recomendar_por_dois_generos(+Genero1, +Genero2, -TituloFilme)
+recomendar_por_dois_generos(Genero1, Genero2, TituloFilme) :-
+    filmes_por_genero(Genero1, TituloFilme),
+    filmes_por_genero(Genero2, TituloFilme).
