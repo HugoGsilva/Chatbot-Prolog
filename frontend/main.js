@@ -7,6 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- BANCO DE INTENÇÕES (Híbrido - Completo) ---
     const intentPrototypes = [
+        // Novas intenções compostas (V2) — posicionadas antes das genéricas
+        {
+            phrase: "filme de GENERO com ATOR",
+            // RegEx solto: procura "...de [genero] com [ator]" (com "ator/atriz" opcional)
+            regex: /de\s+(.+)\s+com\s+(?:(ator|atriz)\s+)?(.+)$/i,
+            // Template para o novo endpoint V2
+            template: (matches) => `/recomendar/ator-e-genero?genero=${encodeURIComponent(matches[1])}&ator=${encodeURIComponent(matches[3])}`
+        },
+        {
+            phrase: "filme de GENERO e GENERO",
+            // RegEx solto: procura "...de [genero1] e [genero2]"
+            regex: /de\s+(.+)\s+e\s+(.+)$/i,
+            // Template para o novo endpoint V2
+            template: (matches) => `/recomendar/dois-generos?genero1=${encodeURIComponent(matches[1])}&genero2=${encodeURIComponent(matches[2])}`
+        },
         {
             phrase: "contar filmes de GENERO em ANO",
             regex: /de\s+(.+)\s+em\s+(\d{4})$/i,
@@ -120,12 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
             displayMessage('Bot', 'Não entendi. Tente: "filmes por [ATOR]"');
             return;
         }
-
-        if (url.startsWith('/contar-filmes')) {
-             url += `&session_id=${SESSION_ID}`;
-        } else {
-             url += `?session_id=${SESSION_ID}`;
-        }
+        // Anexa session_id de forma robusta (suporta URLs já com query)
+        url += (url.includes('?') ? `&session_id=${SESSION_ID}` : `?session_id=${SESSION_ID}`);
 
         try {
             const resp = await fetch(url);
