@@ -12,7 +12,7 @@ from .session_manager import session_service
 # [FIX] Importa as caches (listas vazias) do nlu.py
 # Agora 'main' popula as listas que 'nlu' detém.
 from .nlu import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE
-from .nlu import find_best_actor
+from .nlu import find_best_actor, find_best_genre, find_best_film
 
 # Importa os Schemas Pydantic (necessários para os novos endpoints TDD)
 from .schemas import Filme, Genero, ContagemGenero
@@ -123,6 +123,44 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
     try:
         # (Guarda a query original "suja" do utilizador)
         await session_service.add_to_history(session_id, f"User: {nome_ator}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data
+
+# (Fase 4.4: Implementação do endpoint por gênero)
+@app.get("/filmes-por-genero/{genero}", response_model=list[Filme])
+async def get_filmes_por_genero(genero: str, session_id: str):
+    """
+    Endpoint V2 (Netflix): Retorna filmes para um género,
+    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    """
+
+    # 1. NLU Nível 2 (Resolver Entidade)
+    best_match_genre = find_best_genre(genero)  # (Lida com PT/EN e fuzzy)
+
+    if not best_match_genre:
+        raise HTTPException(status_code=404, detail=f"Gênero '{genero}' não encontrado.")
+
+    # Ajuste de compatibilidade: fatos do KB estão em UPPERCASE
+    best_match_genre_query = best_match_genre.upper()
+
+    # 2. Nível 3 (Lógica Prolog)
+    # (Chama a nova regra 'imdb_rules:filmes_por_genero/2')
+    query_string = f"imdb_rules:filmes_por_genero('{best_match_genre_query}', TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Nenhum filme encontrado para o gênero '{best_match_genre}'.")
+
+    # 3. Formatar Resposta
+    response_data = [{"titulo": r["TituloFilme"]} for r in results]
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        # (Guarda a query original "suja" do utilizador)
+        await session_service.add_to_history(session_id, f"User: {genero}")
         await session_service.add_to_history(session_id, f"Bot: {response_data}")
     except Exception as e:
         print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
