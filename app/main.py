@@ -293,3 +293,44 @@ async def get_genero_do_filme(titulo_filme: str, session_id: str):
         print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
 
     return response_data
+
+
+@app.get("/recomendar/dois-generos", response_model=list[Filme])
+async def recomendar_por_dois_generos(genero1: str, genero2: str, session_id: str):
+    """
+    Endpoint V2 (Netflix): Recomendação composta (Género E Género).
+    Usa fuzzy matching Nível 2 e lógica Prolog Nível 3.
+    """
+
+    # 1. NLU Nível 2 (Resolver Entidades)
+    best_match_genre1 = find_best_genre(genero1)
+    best_match_genre2 = find_best_genre(genero2)
+
+    if not best_match_genre1 or not best_match_genre2:
+        raise HTTPException(status_code=404, detail=f"Um ou ambos os géneros ('{genero1}', '{genero2}') não foram encontrados.")
+
+    # O Prolog espera MAIÚSCULAS (ex: 'DRAMA')
+    genre1_query = best_match_genre1.upper()
+    genre2_query = best_match_genre2.upper()
+
+    # 2. Nível 3 (Lógica Prolog)
+    # (Chama a nova regra 'imdb_rules:recomendar_por_dois_generos/3')
+    query_string = f"imdb_rules:recomendar_por_dois_generos('{genre1_query}', '{genre2_query}', TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Nenhum filme encontrado que combine os géneros '{best_match_genre1}' e '{best_match_genre2}'.")
+
+    # 3. Formatar Resposta
+    response_data = [{"titulo": r["TituloFilme"]} for r in results]
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        # (Guarda a query original "suja" do utilizador)
+        user_query = f"genero1={genero1}, genero2={genero2}"
+        await session_service.add_to_history(session_id, f"User: {user_query}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data

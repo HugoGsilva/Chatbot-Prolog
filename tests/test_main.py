@@ -333,7 +333,7 @@ async def test_recomendar_dois_generos_v2(anyio_backend, monkeypatch: pytest.Mon
     # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
     QUERY_FUZZY_GENERO1 = "drama"  # Input "sujo"
     QUERY_FUZZY_GENERO2 = "comdy"  # Input "sujo"
-    FILME_ESPERADO = "Romantic Story"  # (Assumindo que este filme é 'DRAMA' e 'COMEDY')
+    FILME_ESPERADO = "Sample Film"  # Ajustado ao dataset de amostra atual (DRAMA & COMEDY)
 
     # --- Mocking (igual aos outros) ---
     mock_session_service = AsyncMock()
