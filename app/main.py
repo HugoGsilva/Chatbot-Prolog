@@ -166,3 +166,41 @@ async def get_filmes_por_genero(genero: str, session_id: str):
         print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
 
     return response_data
+
+# (Fase 4.6: Implementação do endpoint gênero do filme)
+@app.get("/genero-do-filme/{titulo_filme}", response_model=list[Genero])
+async def get_genero_do_filme(titulo_filme: str, session_id: str):
+    """
+    Endpoint V2 (Netflix): Retorna TODOS os géneros de um filme.
+    """
+
+    # 1. NLU Nível 2 (Resolver Entidade)
+    best_match_film = find_best_film(titulo_filme)
+    if not best_match_film:
+        raise HTTPException(status_code=404, detail=f"Filme '{titulo_filme}' não encontrado.")
+
+    # 2. Nível 3 (Lógica Prolog)
+    # (Chama 'imdb_rules:genero_do_filme/2'. O Prolog irá encontrar TODOS os matches)
+    query_string = f"imdb_rules:genero_do_filme('{best_match_film}', NomeGenero)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Nenhum género encontrado para o filme '{best_match_film}'.")
+
+    # 3. Formatar Resposta (Uma lista de objetos Genero)
+    response_data = [{"nome": r["NomeGenero"]} for r in results]
+    # Estabiliza ordem usando cache de géneros (ascendente) para previsibilidade nos testes
+    try:
+        order_map = {g: i for i, g in enumerate(GENRE_CACHE)}
+        response_data.sort(key=lambda x: order_map.get(x["nome"], len(order_map)))
+    except Exception:
+        pass
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        await session_service.add_to_history(session_id, f"User: {titulo_filme}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data

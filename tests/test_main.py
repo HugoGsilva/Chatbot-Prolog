@@ -176,10 +176,11 @@ async def test_get_genero_do_filme_v2(anyio_backend, monkeypatch: pytest.MonkeyP
     assert resp.status_code == 200  # (Isto deve falhar com 404)
 
     # (Asserções que vão passar quando o 200 OK for corrigido)
-    # (Este endpoint retorna um objeto, não uma lista)
+    # (Este endpoint retorna uma LISTA de géneros)
     data = resp.json()
-    assert isinstance(data, dict)
-    assert data["nome"] == GENERO_ESPERADO
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["nome"] == GENERO_ESPERADO  # Verifica se o primeiro género está correto
 
     # Validar histórico (NLU Nível 1)
     mock_session_service.add_to_history.assert_any_call(
