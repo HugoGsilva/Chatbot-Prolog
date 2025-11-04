@@ -146,7 +146,7 @@ async def recomendar_por_ator_e_genero(ator: str, genero: str, session_id: str):
 
     # O Prolog espera MAIÚSCULAS (ex: 'TOM HANKS', 'DRAMA')
     actor_query = best_match_actor.upper()
-    genre_query = best_match_genre.upper()
+    genre_query = best_match_genre # (O NLU já devolve o nome exato do KB)
 
     # 2. Nível 3 (Lógica Prolog)
     # (Chama a nova regra 'imdb_rules:recomendar_por_ator_e_genero/3')
@@ -315,8 +315,8 @@ async def recomendar_por_dois_generos(genero1: str, genero2: str, session_id: st
         raise HTTPException(status_code=404, detail=f"Um ou ambos os géneros ('{genero1}', '{genero2}') não foram encontrados.")
 
     # O Prolog espera MAIÚSCULAS (ex: 'DRAMA')
-    genre1_query = best_match_genre1.upper()
-    genre2_query = best_match_genre2.upper()
+    genre1_query = best_match_genre1 # (O NLU já devolve o nome exato do KB)
+    genre2_query = best_match_genre2 # (O NLU já devolve o nome exato do KB)
 
     # 2. Nível 3 (Lógica Prolog)
     # (Chama a nova regra 'imdb_rules:recomendar_por_dois_generos/3')

@@ -100,26 +100,31 @@ def find_best_actor(query: str) -> Optional[str]:
 
 def find_best_genre(query: str) -> Optional[str]:
     """
-    Wrapper bilíngue para géneros.
-    1. Tenta um match fuzzy contra a cache PT (GENRE_CACHE_PT).
-    2. Se encontrar, traduz para EN (usando GENRE_TRANSLATION_MAP).
-    3. Se falhar, tenta um match fuzzy contra a cache EN (GENRE_CACHE) como fallback.
+    Wrapper bilíngue e robusto para géneros.
+    - Tenta primeiro um match fuzzy em PT e traduz para EN.
+    - Em seguida, normaliza para o label EXATO do KB (GENRE_CACHE) via fuzzy.
+    - Se PT falhar, tenta diretamente contra o KB em EN.
+    Retorna SEMPRE o label exatamente como existe no KB (tipicamente UPPERCASE),
+    garantindo compatibilidade com as regras Prolog.
     """
-    # Normalizar a query para comparação
     query_upper = query.upper()
 
-    # --- Nível 1: Tentar Match em Português ---
-    best_pt_match = find_best_match(query_upper, GENRE_CACHE_PT, threshold=75)
+    # 1) Tenta em Português e traduz para EN
+    best_pt = find_best_match(query_upper, GENRE_CACHE_PT, threshold=75)
+    if best_pt:
+        translated_en = GENRE_TRANSLATION_MAP.get(best_pt)
+        if translated_en:
+            # 1.1) Mapear para label EXATO do KB (GENRE_CACHE)
+            # Usa threshold mais tolerante para variações (singular/plural, sufixos)
+            kb_label = find_best_match(translated_en.upper(), GENRE_CACHE, threshold=60)
+            if kb_label:
+                return kb_label
+            # Se não encontrar no KB, devolve a tradução (melhor esforço)
+            return translated_en
 
-    if best_pt_match:
-        # Traduz para o nome que o Prolog espera (EN)
-        return GENRE_TRANSLATION_MAP.get(best_pt_match)
-
-    # --- Nível 2: Fallback para Match em Inglês ---
-    # Usa a GENRE_CACHE global definida neste ficheiro
-    best_en_match = find_best_match(query_upper, GENRE_CACHE, threshold=75)
-
-    return best_en_match
+    # 2) Fallback: procurar diretamente no KB com a query (EN ou PT uppercase)
+    best_en = find_best_match(query_upper, GENRE_CACHE, threshold=60)
+    return best_en
 
 
 def find_best_film(query: str) -> Optional[str]:
