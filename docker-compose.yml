@@ -40,14 +40,14 @@ services:
       dockerfile: data_netflix/Dockerfile.db-init
     container_name: imdb-etl-pipeline
     # [FIX 1] O comando que vamos criar na Fase 1.4
-    command: python data_imdb/run_pipeline.py
+    command: python data_netflix/run_pipeline.py
 
     # [FIX 1] Montagem de volume "cirúrgica"
     # Monta APENAS o diretório de output (knowledge)
     # E o diretório de input (data_imdb)
     volumes:
       - ./prolog/knowledge:/app/prolog/knowledge
-      - ./data_imdb:/app/data_imdb
+      - ./data_netflix:/app/data_netflix
 
     # [FIX 2] O ETL DEVE esperar que as bases de dados estejam PRONTAS
     depends_on:

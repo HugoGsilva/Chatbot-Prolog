@@ -15,7 +15,7 @@ DB_NAME = "moviedb"
 REDIS_HOST = "redis" # O nome do serviço no docker-compose
 REDIS_PORT = 6379
 
-CSV_PATH = "/app/data_netflix/movies_metadata.csv"
+CSV_PATH = "/app/data_netflix/netflix_titles.csv"
 SQL_INIT_PATH = "/app/data_netflix/init_netflix.sql"
 PROLOG_FACTS_PATH = "/app/prolog/knowledge/imdb_kb.pl" # (O volume montado)
 

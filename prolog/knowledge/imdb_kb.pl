@@ -1,9 +1,5 @@
 :- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2]).
 
-:- discontiguous(netflix_title/3).
-:- discontiguous(netflix_genre/2).
-:- discontiguous(netflix_actor/2).
-
 netflix_title('s2', 'Blood & Water', 2021).
 netflix_genre('s2', 'INTERNATIONAL TV SHOWS').
 netflix_genre('s2', 'TV DRAMAS').

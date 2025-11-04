@@ -15,10 +15,10 @@ RUN pip install --upgrade pip && pip install -r requirements-etl.txt
 
 # 3. Copia os ficheiros de dados e scripts necessários para o pipeline
 # (O docker-compose montará o volume de output /prolog/knowledge)
-COPY data_imdb/ /app/data_imdb/
+COPY data_netflix/ /app/data_netflix/
 
 # (Não precisamos de COPY backend/scripts/ - FIX 3)
 
 # 4. Define o ponto de entrada padrão (apenas para referência,
 #    pois o docker-compose.yml irá substituí-lo)
-CMD ["python", "data_imdb/run_pipeline.py"]
+CMD ["python", "data_netflix/run_pipeline.py"]
