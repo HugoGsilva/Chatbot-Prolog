@@ -130,6 +130,47 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
     return response_data
 
 
+@app.get("/recomendar/ator-e-genero", response_model=list[Filme])
+async def recomendar_por_ator_e_genero(ator: str, genero: str, session_id: str):
+    """
+    Endpoint V2 (Netflix): Recomendação composta (Ator E Género).
+    Usa fuzzy matching Nível 2 e lógica Prolog Nível 3.
+    """
+
+    # 1. NLU Nível 2 (Resolver Entidades)
+    best_match_actor = find_best_actor(ator)
+    best_match_genre = find_best_genre(genero)
+
+    if not best_match_actor or not best_match_genre:
+        raise HTTPException(status_code=404, detail=f"Ator '{ator}' ou Género '{genero}' não encontrados.")
+
+    # O Prolog espera MAIÚSCULAS (ex: 'TOM HANKS', 'DRAMA')
+    actor_query = best_match_actor.upper()
+    genre_query = best_match_genre.upper()
+
+    # 2. Nível 3 (Lógica Prolog)
+    # (Chama a nova regra 'imdb_rules:recomendar_por_ator_e_genero/3')
+    query_string = f"imdb_rules:recomendar_por_ator_e_genero('{actor_query}', '{genre_query}', TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Nenhum filme encontrado para o ator '{best_match_actor}' no género '{best_match_genre}'.")
+
+    # 3. Formatar Resposta
+    response_data = [{"titulo": r["TituloFilme"]} for r in results]
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        # (Guarda a query original "suja" do utilizador)
+        user_query = f"ator={ator}, genero={genero}"
+        await session_service.add_to_history(session_id, f"User: {user_query}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data
+
+
 @app.get("/contar-filmes", response_model=ContagemGenero)
 async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str):
     """
