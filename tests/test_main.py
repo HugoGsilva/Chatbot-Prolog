@@ -319,3 +319,67 @@ async def test_recomendar_ator_e_genero_v2(anyio_backend, monkeypatch: pytest.Mo
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_rec_composta", f"Bot: {data}"
     )
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_recomendar_dois_generos_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o novo endpoint V2 (Netflix) /recomendar/dois-generos.
+    Usa queries "fuzzy" (Nível 1 e 2).
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
+    QUERY_FUZZY_GENERO1 = "drama"  # Input "sujo"
+    QUERY_FUZZY_GENERO2 = "comdy"  # Input "sujo"
+    FILME_ESPERADO = "Romantic Story"  # (Assumindo que este filme é 'DRAMA' e 'COMEDY')
+
+    # --- Mocking (igual aos outros) ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+
+    # Prepara respostas simuladas para as caches (atores, géneros, filmes)
+    actores_cache = ["ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
+    generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
+    filmes_cache = ["Sample Film", "Another Title", "Romantic Story"]
+    mock_client.get = AsyncMock(side_effect=[
+        json.dumps(actores_cache),
+        json.dumps(generos_cache),
+        json.dumps(filmes_cache),
+    ])
+
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve"
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            params = {
+                "genero1": QUERY_FUZZY_GENERO1,
+                "genero2": QUERY_FUZZY_GENERO2,
+                "session_id": "sessao_v2_rec_generos",
+            }
+            resp = await client.get("/recomendar/dois-generos", params=params)
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    # (Asserções que vão passar quando o 200 OK for corrigido)
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["titulo"] == FILME_ESPERADO
+
+    # Validar histórico (NLU Nível 1)
+    user_query = f"genero1={QUERY_FUZZY_GENERO1}, genero2={QUERY_FUZZY_GENERO2}"
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_rec_generos", f"User: {user_query}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_rec_generos", f"Bot: {data}"
+    )
