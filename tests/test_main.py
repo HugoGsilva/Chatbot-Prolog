@@ -383,3 +383,61 @@ async def test_recomendar_dois_generos_v2(anyio_backend, monkeypatch: pytest.Mon
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_rec_generos", f"Bot: {data}"
     )
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_get_filmes_por_diretor_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o novo endpoint V2 /filmes-por-diretor.
+    Usa uma query "fuzzy" (Nível 1 e 2).
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Dados de Teste ---
+    QUERY_FUZZY = "mike flanagan"
+    NOME_DIRETOR_REAL = "MIKE FLANAGAN"
+    FILME_ESPERADO = "Midnight Mass"  # Ajustado conforme retorno do Prolog
+
+    # --- Mocking do SessionService e Caches do Redis ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+
+    # Prepara respostas simuladas para as caches NLU no Redis
+    actores_cache = ["ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
+    generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
+    filmes_cache = [FILME_ESPERADO, "Another Title", "Romantic Story"]
+    diretores_cache = [NOME_DIRETOR_REAL, "DIRECTOR B", "DIRECTOR C"]
+    mock_client.get = AsyncMock(side_effect=[
+        json.dumps(actores_cache),
+        json.dumps(generos_cache),
+        json.dumps(filmes_cache),
+        json.dumps(diretores_cache),
+    ])
+
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve" (lê caches do Redis)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get(
+                f"/filmes-por-diretor/{quote(QUERY_FUZZY)}?session_id=sessao_v2_diretor"
+            )
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    data = resp.json()
+    assert isinstance(data, list)
+    assert data[0]["titulo"] == FILME_ESPERADO
+
+    # Validar histórico (NLU Nível 1)
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_diretor", f"User: {QUERY_FUZZY}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_diretor", f"Bot: {data}"
+    )

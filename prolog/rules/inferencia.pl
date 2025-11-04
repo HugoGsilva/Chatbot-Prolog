@@ -4,6 +4,7 @@
 % e exportamos as novas regras)
 :- module(imdb_rules, [
     filmes_por_ator/2,
+    filmes_por_diretor/2,
     filmes_por_genero/2,
     genero_do_filme/2,
     contar_filmes_por_genero_e_ano/3,
@@ -66,3 +67,11 @@ recomendar_por_ator_e_genero(NomeAtor, NomeGenero, TituloFilme) :-
 recomendar_por_dois_generos(Genero1, Genero2, TituloFilme) :-
     filmes_por_genero(Genero1, TituloFilme),
     filmes_por_genero(Genero2, TituloFilme).
+
+% --- Nova Regra ---
+
+% filmes_por_diretor(+NomeDiretor, -TituloFilme)
+% (Assume que NomeDiretor foi resolvido pelo NLU Nível 2)
+filmes_por_diretor(NomeDiretor, TituloFilme) :-
+    imdb_kb:netflix_director(ShowID, NomeDiretor),
+    imdb_kb:netflix_title(ShowID, TituloFilme, _).

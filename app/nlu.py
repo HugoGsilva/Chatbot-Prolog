@@ -15,6 +15,7 @@ import json
 ACTOR_CACHE: list[str] = []
 GENRE_CACHE: list[str] = []
 FILM_CACHE: list[str] = []
+DIRECTOR_CACHE: list[str] = []
 
 GENRE_TRANSLATION_MAP = {
     # Action & Adventure
@@ -353,6 +354,10 @@ def find_best_actor(query: str) -> Optional[str]:
     # Usa a ACTOR_CACHE global definida neste ficheiro
     return find_best_match(query, ACTOR_CACHE)
 
+def find_best_director(query: str) -> Optional[str]:
+    """Wrapper específico para diretores: consulta a cache global de diretores."""
+    return find_best_match(query, DIRECTOR_CACHE)
+
 
 def find_best_genre(query: str) -> Optional[str]:
     """
@@ -364,6 +369,28 @@ def find_best_genre(query: str) -> Optional[str]:
     garantindo compatibilidade com as regras Prolog.
     """
     query_upper = query.upper()
+
+    # Atalhos específicos para alinhar entradas curtas em EN com categorias de TV do KB.
+    # Isto evita que termos genéricos como "ACTION" casem incorretamente com gêneros amplos
+    # (ex.: INTERNATIONAL MOVIES) quando o fuzzy é aplicado contra GENRE_CACHE.
+    EN_SHORTCUTS = {
+        "ACTION": "TV ACTION & ADVENTURE",
+        "DRAMA": "DRAMAS",
+        "THRILLER": "THRILLERS",
+        "TRILER": "THRILLERS",   # tolera erro comum de digitação
+        "TRILLER": "THRILLERS",  # outra variação
+    }
+    if query_upper in EN_SHORTCUTS:
+        try:
+            print(f"[NLU] EN shortcut aplicado para '{query_upper}' -> '{EN_SHORTCUTS[query_upper]}'")
+        except Exception:
+            pass
+        mapped = EN_SHORTCUTS[query_upper]
+        # Mapear para o label EXATO do KB (em UPPERCASE)
+        kb_label = find_best_match(mapped.upper(), GENRE_CACHE, threshold=60)
+        if kb_label:
+            return kb_label
+        return mapped
 
     # 1) Tenta em Português e traduz para EN
     best_pt = find_best_match(query_upper, GENRE_CACHE_PT, threshold=75)

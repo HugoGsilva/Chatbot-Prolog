@@ -34,6 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
             template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}`
         },
         {
+            phrase: "filmes do diretor DIRETOR",
+            // RegEx solto: Procura "...(do/de/pelo) (diretor/realizador) [ENTIDADE]"
+            // O Fuse.js tratará de variações como "flmes do diretor..."
+            regex: /(?:do|de|pelo)\s+(?:diretor|realizador)\s+(.+)$/i,
+            template: (matches) => `/filmes-por-diretor/${encodeURIComponent(matches[1])}`
+        },
+        {
             phrase: "filmes por ATOR",
             regex: /(por|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
             template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}` 

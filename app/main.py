@@ -1,5 +1,6 @@
 import os
 import json
+import csv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -11,11 +12,47 @@ from .session_manager import session_service
 
 # [FIX] Importa as caches (listas vazias) do nlu.py
 # Agora 'main' popula as listas que 'nlu' detém.
-from .nlu import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE
-from .nlu import find_best_actor, find_best_genre, find_best_film
+from .nlu import ACTOR_CACHE, GENRE_CACHE, FILM_CACHE, DIRECTOR_CACHE
+from .nlu import find_best_actor, find_best_genre, find_best_film, find_best_director
 
 # Importa os Schemas Pydantic (necessários para os novos endpoints TDD)
 from .schemas import Filme, Genero, ContagemGenero
+
+# --- Helper: fallback para carregar caches NLU do CSV ---
+def load_nlu_caches_from_csv(csv_path: str) -> tuple[int, int, int, int]:
+    actor_set: set[str] = set()
+    genre_set: set[str] = set()
+    film_set: set[str] = set()
+    director_set: set[str] = set()
+
+    try:
+        with open(csv_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                title = (row.get("title") or "").strip()
+                if title:
+                    film_set.add(title.upper())
+
+                cast = row.get("cast") or ""
+                for name in [n.strip() for n in cast.split(",") if n.strip()]:
+                    actor_set.add(name.upper())
+
+                director = row.get("director") or ""
+                for name in [n.strip() for n in director.split(",") if n.strip()]:
+                    director_set.add(name.upper())
+
+                listed = row.get("listed_in") or ""
+                for g in [gr.strip().upper() for gr in listed.split(",") if gr.strip()]:
+                    genre_set.add(g)
+
+        ACTOR_CACHE.extend(sorted(actor_set))
+        GENRE_CACHE.extend(sorted(genre_set))
+        FILM_CACHE.extend(sorted(film_set))
+        DIRECTOR_CACHE.extend(sorted(director_set))
+        return len(ACTOR_CACHE), len(GENRE_CACHE), len(FILM_CACHE), len(DIRECTOR_CACHE)
+    except Exception as e:
+        print(f"[Startup] [ERRO] Falha ao ler CSV de caches NLU: {e}")
+        return (0, 0, 0, 0)
 
 # --- LÓGICA DE STARTUP (LIFESPAN V4.3 - LEVE) ---
 
@@ -42,23 +79,35 @@ async def lifespan(app: FastAPI):
         actor_data = await session_service.client.get("nlu_actors_cache")
         genre_data = await session_service.client.get("nlu_genres_cache")
         film_data = await session_service.client.get("nlu_films_cache")
+        director_data = await session_service.client.get("nlu_directors_cache")
 
         if not actor_data or not genre_data or not film_data:
-            print("[Startup] [ERRO CRÍTICO] Caches NLU não encontradas no Redis.")
-            # (Numa app real, isto devia abortar o startup)
+            print("[Startup] [ERRO CRÍTICO] Caches NLU não encontradas no Redis. Tentando fallback CSV...")
+            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data_netflix", "netflix_titles.csv"))
+            counts = load_nlu_caches_from_csv(csv_path)
+            print(f"[Startup] Caches NLU carregadas do CSV: {counts[0]} Atores, {counts[1]} Géneros, {counts[2]} Filmes, {counts[3]} Diretores.")
         else:
             # Popula as listas globais importadas do nlu.py
             ACTOR_CACHE.extend(json.loads(actor_data))
             GENRE_CACHE.extend(json.loads(genre_data))
             FILM_CACHE.extend(json.loads(film_data))
-            print(f"[Startup] Caches NLU carregadas do Redis: {len(ACTOR_CACHE)} Atores, {len(GENRE_CACHE)} Géneros, {len(FILM_CACHE)} Filmes.")
+            if director_data:
+                DIRECTOR_CACHE.extend(json.loads(director_data))
+            print(f"[Startup] Caches NLU carregadas do Redis: {len(ACTOR_CACHE)} Atores, {len(GENRE_CACHE)} Géneros, {len(FILM_CACHE)} Filmes, {len(DIRECTOR_CACHE)} Diretores.")
 
     except Exception as e:
         print(f"[Startup] [ERRO CRÍTICO] Falha ao carregar caches NLU do Redis: {e}")
+        # --- Fallback CSV mesmo em erro de conexão ---
+        csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data_netflix", "netflix_titles.csv"))
+        counts = load_nlu_caches_from_csv(csv_path)
+        print(f"[Startup] [Fallback] Caches NLU carregadas do CSV: {counts[0]} Atores, {counts[1]} Géneros, {counts[2]} Filmes, {counts[3]} Diretores.")
 
     # 3. Testar Conexão Redis (do session_service)
-    await session_service.test_connection()
-    print("[Startup] Conexão com Redis (Sessão) verificada.")
+    try:
+        await session_service.test_connection()
+        print("[Startup] Conexão com Redis (Sessão) verificada.")
+    except Exception as e:
+        print(f"[Startup] [AVISO] Redis indisponível, prosseguindo sem sessão: {e}")
 
     print("\n--- SERVIÇO 'app' PRONTO ---")
     yield  # A API arranca aqui
@@ -123,6 +172,41 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
     try:
         # (Guarda a query original "suja" do utilizador)
         await session_service.add_to_history(session_id, f"User: {nome_ator}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data
+
+@app.get("/filmes-por-diretor/{diretor}", response_model=list[Filme])
+async def get_filmes_por_diretor(diretor: str, session_id: str):
+    """
+    Endpoint V2 (Netflix): Retorna filmes para um diretor, 
+    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    """
+
+    # 1. NLU Nível 2
+    best_match_director = find_best_director(diretor)
+
+    if not best_match_director:
+        raise HTTPException(status_code=404, detail=f"Diretor '{diretor}' não encontrado.")
+
+    # O Prolog espera MAIÚSCULAS
+    director_query = best_match_director.upper()
+
+    # 2. Nível 3 (Lógica Prolog)
+    query_string = f"imdb_rules:filmes_por_diretor('{director_query}', TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Nenhum filme encontrado para o diretor '{best_match_director}'.")
+
+    # 3. Formatar Resposta
+    response_data = [{"titulo": r["TituloFilme"]} for r in results]
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        await session_service.add_to_history(session_id, f"User: {diretor}")
         await session_service.add_to_history(session_id, f"Bot: {response_data}")
     except Exception as e:
         print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")

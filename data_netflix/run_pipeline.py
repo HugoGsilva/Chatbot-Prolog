@@ -112,6 +112,8 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
     all_titles = set()
     all_genres = set()
     all_actors = set()
+    # [V4.13] Novo conjunto para Diretores
+    all_directors = set()
 
     # Usar Pandas para ler do SQL é mais fácil
     df_full = pd.read_sql("SELECT * FROM netflix_titles", engine)
@@ -142,10 +144,26 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
                     all_facts.append(f"netflix_actor({show_id_pl}, {actor_pl}).")
                     all_actors.add(actor)
 
+        # 4. Factos de Diretor (director)
+        # Alguns registos têm múltiplos diretores separados por vírgula
+        if row.get('director') and pd.notna(row['director']):
+            directors = [d.strip().upper() for d in str(row['director']).split(',')]
+            for director in directors:
+                if director:
+                    director_pl = quote_sql(director)
+                    all_facts.append(f"netflix_director({show_id_pl}, {director_pl}).")
+                    all_directors.add(director)
+
     # Escrever o ficheiro Prolog
     print(f"[Pipeline] A escrever {len(all_facts)} factos em {prolog_path}...")
     with open(prolog_path, 'w', encoding='utf-8') as f:
-        f.write(":- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2]).\n\n")
+        # [V4.13] Exporta também netflix_director/2 no módulo
+        f.write(":- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2, netflix_director/2]).\n")
+        # [V4.13] Declara predicados como discontiguous para facilitar geração por blocos
+        f.write(":- discontiguous(netflix_title/3).\n")
+        f.write(":- discontiguous(netflix_genre/2).\n")
+        f.write(":- discontiguous(netflix_actor/2).\n")
+        f.write(":- discontiguous(netflix_director/2).\n\n")
         f.write("\n".join(all_facts))
     print("[Pipeline] Ficheiro de factos Prolog gerado.")
 
@@ -154,7 +172,9 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
     redis_client.set("nlu_actors_cache", json.dumps(list(all_actors)))
     redis_client.set("nlu_genres_cache", json.dumps(list(all_genres)))
     redis_client.set("nlu_films_cache", json.dumps(list(all_titles)))
-    print(f"[Pipeline] Caches NLU guardadas: {len(all_actors)} atores, {len(all_genres)} géneros, {len(all_titles)} filmes.")
+    # [V4.13] Nova cache NLU de diretores
+    redis_client.set("nlu_directors_cache", json.dumps(list(all_directors)))
+    print(f"[Pipeline] Caches NLU guardadas: {len(all_actors)} atores, {len(all_genres)} géneros, {len(all_titles)} filmes, {len(all_directors)} diretores.")
 
 # --- Ponto de Entrada Principal ---
 if __name__ == "__main__":
