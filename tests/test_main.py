@@ -189,3 +189,69 @@ async def test_get_genero_do_filme_v2(anyio_backend, monkeypatch: pytest.MonkeyP
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_filme", f"Bot: {data}"
     )
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_contar_filmes_endpoint_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o endpoint V2 (Netflix) /contar-filmes.
+    Usa uma query "fuzzy" (Nível 1 e 2).
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
+    QUERY_FUZZY_GENERO = "drama"  # Input "sujo"
+    QUERY_ANO = 2020
+    GENERO_REAL = "DRAMA"
+    CONTAGEM_ESPERADA = 1  # Na amostra: 1 filme DRAMA em 2020
+
+    # --- Mocking (igual aos outros) ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+
+    # Prepara respostas simuladas para as caches (atores, géneros, filmes)
+    actores_cache = ["ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
+    generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
+    filmes_cache = ["Sample Film", "Another Title", "Romantic Story"]
+    mock_client.get = AsyncMock(side_effect=[
+        json.dumps(actores_cache),
+        json.dumps(generos_cache),
+        json.dumps(filmes_cache),
+    ])
+
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve"
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            params = {
+                "genero": QUERY_FUZZY_GENERO,
+                "ano": QUERY_ANO,
+                "session_id": "sessao_v2_contagem",
+            }
+            resp = await client.get("/contar-filmes", params=params)
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    # (Asserções que vão passar quando o 200 OK for corrigido)
+    data = resp.json()
+    assert isinstance(data, dict)
+    assert data["genero"] == GENERO_REAL
+    assert data["ano"] == QUERY_ANO
+    assert data["contagem"] == CONTAGEM_ESPERADA
+
+    # Validar histórico (NLU Nível 1)
+    user_query = f"genero={QUERY_FUZZY_GENERO}, ano={QUERY_ANO}"
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_contagem", f"User: {user_query}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_contagem", f"Bot: {data}"
+    )

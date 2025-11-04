@@ -129,6 +129,54 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
 
     return response_data
 
+
+@app.get("/contar-filmes", response_model=ContagemGenero)
+async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str):
+    """
+    Endpoint V2 (Netflix): Conta filmes por género e ano,
+    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    """
+
+    # 1. NLU Nível 2 (Resolver Entidade)
+    best_match_genre = find_best_genre(genero)  # (Isto já lida com PT-BR e fuzzy)
+
+    if not best_match_genre:
+        raise HTTPException(status_code=404, detail=f"Gênero '{genero}' não encontrado.")
+
+    # O Prolog espera MAIÚSCULAS (ex: 'DRAMA')
+    best_match_genre_query = best_match_genre.upper()
+
+    # 2. Nível 3 (Lógica Prolog)
+    # (Chama a nova regra 'imdb_rules:contar_filmes_por_genero_e_ano/3')
+    query_string = (
+        f"imdb_rules:contar_filmes_por_genero_e_ano('{best_match_genre_query}', {ano}, Contagem)"
+    )
+    results = prolog_service.query(query_string)
+
+    # A regra de contagem deve *sempre* retornar um resultado (mesmo que seja 0)
+    if not results or "Contagem" not in results[0]:
+        raise HTTPException(status_code=500, detail="Erro interno ao consultar a contagem no Prolog.")
+
+    # 3. Formatar Resposta
+    contagem_result = results[0]["Contagem"]
+    # Para alinhar com o teste atual, retornamos o gênero em maiúsculas
+    response_data = {
+        "genero": best_match_genre_query,
+        "ano": ano,
+        "contagem": contagem_result,
+    }
+
+    # 4. Nível 4 (Memória - Redis)
+    try:
+        # (Guarda a query original "suja" do utilizador)
+        user_query = f"genero={genero}, ano={ano}"
+        await session_service.add_to_history(session_id, f"User: {user_query}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data
+
 # (Fase 4.4: Implementação do endpoint por gênero)
 @app.get("/filmes-por-genero/{genero}", response_model=list[Filme])
 async def get_filmes_por_genero(genero: str, session_id: str):
