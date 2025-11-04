@@ -22,9 +22,9 @@ async def test_get_filmes_por_ator_v2(anyio_backend, monkeypatch: pytest.MonkeyP
     """
 
     # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
-    QUERY_FUZZY = "tom hanks"  # O input "sujo"
-    NOME_ATOR_REAL = "TOM HANKS"  # O nome na cache NLU
-    FILME_ESPERADO = "FORREST GUMP"  # Um filme que ele fez
+    QUERY_FUZZY = "actor a"  # O input "sujo" (existe no KB)
+    NOME_ATOR_REAL = "ACTOR A"  # O nome na cache NLU (existe)
+    FILME_ESPERADO = "Sample Film"  # Um filme desse ator (s1)
 
     # --- Mocking do SessionService e Caches do Redis ---
     mock_session_service = AsyncMock()
@@ -34,9 +34,9 @@ async def test_get_filmes_por_ator_v2(anyio_backend, monkeypatch: pytest.MonkeyP
     mock_client.aclose = AsyncMock()
 
     # Prepara respostas simuladas para as caches NLU no Redis
-    actores_cache = [NOME_ATOR_REAL, "ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D"]
+    actores_cache = [NOME_ATOR_REAL, "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
     generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
-    filmes_cache = [FILME_ESPERADO, "MOVIE A", "MOVIE B"]
+    filmes_cache = [FILME_ESPERADO, "Another Title", "Romantic Story"]
     mock_client.get = AsyncMock(side_effect=[
         json.dumps(actores_cache),
         json.dumps(generos_cache),
@@ -68,4 +68,63 @@ async def test_get_filmes_por_ator_v2(anyio_backend, monkeypatch: pytest.MonkeyP
     )
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_ator", f"Bot: {data}"
+    )
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_get_filmes_por_genero_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o endpoint V2 (Netflix) /filmes-por-genero.
+    Usa uma query "fuzzy" (Nível 1 e 2), incluindo tradução PT-BR.
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
+    QUERY_FUZZY = "drama"  # O input "sujo" (ex: "dram", "acao")
+    GENERO_REAL_TRADUZIDO = "DRAMA"  # Nome na cache NLU (PT ou EN)
+    FILME_ESPERADO = "Sample Film"  # Um filme desse género
+
+    # --- Mocking do SessionService e Caches do Redis ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+
+    # Prepara respostas simuladas para as caches (atores, géneros, filmes)
+    actores_cache = ["ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
+    generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
+    filmes_cache = ["Sample Film", "Another Title", "Romantic Story"]
+    mock_client.get = AsyncMock(side_effect=[
+        json.dumps(actores_cache),
+        json.dumps(generos_cache),
+        json.dumps(filmes_cache),
+    ])
+
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve"
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get(
+                f"/filmes-por-genero/{quote(QUERY_FUZZY)}?session_id=sessao_v2_genero"
+            )
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    # (Asserções que vão passar quando o 200 OK for corrigido)
+    data = resp.json()
+    assert isinstance(data, list)
+    assert data[0]["titulo"] == FILME_ESPERADO
+
+    # Validar histórico (NLU Nível 1)
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_genero", f"User: {QUERY_FUZZY}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_genero", f"Bot: {data}"
     )
