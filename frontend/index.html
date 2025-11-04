@@ -19,8 +19,8 @@
     <div class="chatbot-container">
         
         <header class="chatbot-header">
-            <h1>Chatbot Sakila-Prolog</h1>
-            <p>Um chatbot com NLU híbrido (Fuzzy + RegEx) e backend Prolog.</p>
+            <h1>Chatbot Netflix-Prolog</h1>
+            <p class="subtitle">Este bot utiliza um NLU Híbrido (Fuzzy + RegEx) e um backend Prolog para consultas no catálogo Netflix. O sistema é tolerante a erros basicos. (ex: comdy para 'Comedy').</p>
         </header>
 
         <main class="chat-window" id="chat-window">
@@ -28,50 +28,22 @@
             <div id="chat-log">
                 
                 <div class="chat-message bot-message help-text">
-                    <p><strong>Olá! Sou o Chatbot Sakila.</strong><br>Eu entendo comandos de linguagem natural, mesmo com erros de digitação.</p>
-                    <p>Aqui estão os padrões que eu entendo:</p>
+                    <p><strong>Principais Capacidades (Exemplos):</strong></p>
                     <ul>
                         <li>
-                            <strong>Recomendar filme por gênero e ator</strong><br>
-                            <strong>Comando:</strong> <code>filme de [GENERO] com [ATOR]</code><br>
-                            <strong>Exemplo:</strong> <code>filme de acao com actor a</code>
+                            <strong>Recomendar:</strong> <code>"filme de ação com ator a"</code>
                         </li>
                         <li>
-                            <strong>Recomendar filme por dois gêneros</strong><br>
-                            <strong>Comando:</strong> <code>filme de [GENERO] e [GENERO]</code><br>
-                            <strong>Exemplo:</strong> <code>filme de drama e comdy</code>
+                            <strong>Pesquisar (Múltiplos critérios):</strong> <code>"filme de drama e terror"</code>
                         </li>
                         <li>
-                            <strong>Pesquisar filmes por diretor</strong><br>
-                            <strong>Comando:</strong> <code>filmes do diretor [DIRETOR]</code><br>
-                            <strong>Exemplo:</strong> <code>filmes do diretor mike flanagan</code>
+                            <strong>Pesquisar (Entidade):</strong> <code>"filmes do diretor X" / "filmes da atriz Y"</code>
                         </li>
                         <li>
-                            <strong>Pesquisar filmes por ator</strong><br>
-                            <strong>Comando:</strong> <code>filmes por [ATOR]</code> (ou <code>com ator...</code>)<br>
-                            <strong>Exemplo:</strong> <code>filmes da atriz penelope</code>
-                        </li>
-                        <li>
-                            <strong>Recomendar filmes por ator</strong><br>
-                            <strong>Comando:</strong> <code>recomendar por [ATOR]</code><br>
-                            <strong>Exemplo:</strong> <code>recomendação do penelope</code>
-                        </li>
-                        <li>
-                            <strong>Pesquisar filmes por gênero</strong><br>
-                            <strong>Comando:</strong> <code>filmes de [GENERO]</code><br>
-                            <strong>Exemplo:</strong> <code>filmes de acao</code> (ou <code>filmes de acta</code>)
-                        </li>
-                        <li>
-                            <strong>Encontrar gênero do filme</strong><br>
-                            <strong>Comando:</strong> <code>genero do [FILME]</code><br>
-                            <strong>Exemplo:</strong> <code>genero de acdemy dinosaur</code>
-                        </li>
-                        <li>
-                            <strong>Contar filmes por gênero e ano</strong><br>
-                            <strong>Comando:</strong> <code>contar filmes de [GENERO] em [ANO]</code><br>
-                            <strong>Exemplo:</strong> <code>contar filmes de comdy em 2006</code>
+                            <strong>Analisar:</strong> <code>"gênero do filme X" / "contar filmes de 2006"</code>
                         </li>
                     </ul>
+                    <p style="margin-top: 15px;">Inicie sua consulta.</p>
                 </div>
             
             </div> </main>
