@@ -128,3 +128,63 @@ async def test_get_filmes_por_genero_v2(anyio_backend, monkeypatch: pytest.Monke
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_genero", f"Bot: {data}"
     )
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_get_genero_do_filme_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o endpoint V2 (Netflix) /genero-do-filme.
+    Usa uma query "fuzzy" (Nível 1 e 2).
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Dados de Teste (AJUSTE CONFORME O SEU CSV DE AMOSTRA) ---
+    QUERY_FUZZY = "sample film"  # O input "sujo"
+    FILME_REAL = "Sample Film"    # O nome na cache NLU
+    GENERO_ESPERADO = "DRAMA"     # O género desse filme
+
+    # --- Mocking (igual aos outros) ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+
+    # Prepara respostas simuladas para as caches (atores, géneros, filmes)
+    actores_cache = ["ACTOR A", "ACTOR B", "ACTOR C", "ACTOR D", "ACTOR E"]
+    generos_cache = ["DRAMA", "COMEDY", "ACTION", "ROMANCE", "THRILLER"]
+    filmes_cache = ["Sample Film", "Another Title", "Romantic Story"]
+    mock_client.get = AsyncMock(side_effect=[
+        json.dumps(actores_cache),
+        json.dumps(generos_cache),
+        json.dumps(filmes_cache),
+    ])
+
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve"
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get(
+                f"/genero-do-filme/{quote(QUERY_FUZZY)}?session_id=sessao_v2_filme"
+            )
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    # (Asserções que vão passar quando o 200 OK for corrigido)
+    # (Este endpoint retorna um objeto, não uma lista)
+    data = resp.json()
+    assert isinstance(data, dict)
+    assert data["nome"] == GENERO_ESPERADO
+
+    # Validar histórico (NLU Nível 1)
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_filme", f"User: {QUERY_FUZZY}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_filme", f"Bot: {data}"
+    )
