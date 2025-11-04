@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             phrase: "recomendar com base em ATOR",
             regex: /(com\s+base\s+em|baseado\s+em|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
-            template: (matches) => `/recomendar-por-ator/${encodeURIComponent(matches[3])}`
+            // Alinha com backend disponível (fallback para listagem por ator)
+            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}`
         },
         {
             phrase: "filmes por ATOR",
@@ -44,8 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         {
             phrase: "gênero do FILME",
-            regex: /(do|de)\s+(.+)$/i,
-            template: (matches) => `/genero-do-filme/${encodeURIComponent(matches[2])}`
+            // Exige prefixo explícito "genero"/"gênero" para não colidir com "filmes de GENERO"
+            regex: /(?:genero|gênero)\s+(?:do|de)\s+(.+)$/i,
+            template: (matches) => `/genero-do-filme/${encodeURIComponent(matches[1])}`
         },
         {
             phrase: "filmes de GENERO",
@@ -110,9 +112,24 @@ document.addEventListener('DOMContentLoaded', () => {
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- FUNÇÃO DE ROTEAMENTO (Inalterada) ---
+    // --- FUNÇÃO DE ROTEAMENTO (Precedência para intenções compostas) ---
     function routeIntent(message) {
         const msg = message.trim();
+
+        // 1) Força precedência para padrões compostos quando o regex casa
+        for (const intent of intentPrototypes.slice(0, 2)) { // duas primeiras são compostas
+            const m = msg.match(intent.regex);
+            if (m) return intent.template(m);
+        }
+
+        // 1.1) Precedência para "gênero do FILME" para evitar colisão com "filmes de GENERO"
+        const generoFilmeIntent = intentPrototypes.find(i => i.phrase === "gênero do FILME");
+        if (generoFilmeIntent) {
+            const m2 = msg.match(generoFilmeIntent.regex);
+            if (m2) return generoFilmeIntent.template(m2);
+        }
+
+        // 2) Fallback para fuzzy global com Fuse.js
         const results = fuse.search(msg);
         if (!results.length) return null;
         const bestIntent = results[0].item;

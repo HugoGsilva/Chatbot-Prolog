@@ -34,10 +34,13 @@ filmes_por_genero(NomeGenero, TituloFilme) :-
     imdb_kb:netflix_genre(ShowID, NomeGenero),
     imdb_kb:netflix_title(ShowID, TituloFilme, _).
 
-% genero_do_filme(+TituloFilme, -NomeGenero)
-% (Assume que TituloFilme já foi resolvido pelo NLU Nível 2)
-genero_do_filme(TituloFilme, NomeGenero) :-
-    imdb_kb:netflix_title(ShowID, TituloFilme, _),
+% genero_do_filme(+TituloFilmeRaw, -NomeGenero)
+% (Case-insensitive: aceita título em qualquer caixa)
+genero_do_filme(TituloFilmeRaw, NomeGenero) :-
+    upcase_atom(TituloFilmeRaw, UpperParam),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    upcase_atom(TituloOriginal, UpperFact),
+    UpperParam = UpperFact,
     imdb_kb:netflix_genre(ShowID, NomeGenero).
 
 % contar_filmes_por_genero_e_ano(+NomeGenero, +Ano, -Contagem)

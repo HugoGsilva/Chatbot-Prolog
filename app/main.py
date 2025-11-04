@@ -269,8 +269,13 @@ async def get_genero_do_filme(titulo_filme: str, session_id: str):
         raise HTTPException(status_code=404, detail=f"Filme '{titulo_filme}' não encontrado.")
 
     # 2. Nível 3 (Lógica Prolog)
-    # (Chama 'imdb_rules:genero_do_filme/2'. O Prolog irá encontrar TODOS os matches)
-    query_string = f"imdb_rules:genero_do_filme('{best_match_film}', NomeGenero)"
+    # Ajuste de robustez: o cache de filmes está em UPPERCASE.
+    # Garantimos que o match por título seja case-insensitive usando upcase_atom/2.
+    # Depois, obtemos todos os géneros associados ao mesmo ID.
+    query_string = (
+        f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), Upper = '{best_match_film}', "
+        f"imdb_kb:netflix_genre(ID, NomeGenero)"
+    )
     results = prolog_service.query(query_string)
 
     if not results:
