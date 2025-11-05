@@ -47,8 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         {
             phrase: "filme com ator ATOR",
-            regex: /com\s+(ator|atriz)\s+(.+)$/i,
-            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[2])}`
+            // RegEx flexível: aceita "com o/a" e "ator/atriz" como opcionais
+            regex: /com\s+(?:o\s+|a\s+)?(?:ator\s+|atriz\s+)?(.+)$/i,
+            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[1])}`
         },
         {
             phrase: "gênero do FILME",
@@ -87,11 +88,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Formata a resposta (JSON vs. Texto)
         let textContent;
-        if (typeof message === 'object' && message !== null) {
+        if (Array.isArray(message)) {
+            // Lista de Filmes
+            if (message.length > 0 && typeof message[0] === 'object' && 'titulo' in message[0]) {
+                textContent = message.map(m => m.titulo).join(', ');
+            // [Nova Lógica] Lista de Géneros (para /genero-do-filme)
+            } else if (message.length > 0 && typeof message[0] === 'object' && 'nome' in message[0]) {
+                const capitalize = (s) => {
+                    if (typeof s !== 'string') return '';
+                    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+                };
+                const generos = message.map(g => capitalize(g.nome));
+                if (generos.length === 1) {
+                    textContent = `Filme de ${generos[0]}`;
+                } else if (generos.length === 2) {
+                    textContent = `Filme de ${generos.join(' e ')}`;
+                } else {
+                    const ultimo = generos.pop();
+                    textContent = `Filme de ${generos.join(', ')}, e ${ultimo}`;
+                }
+            } else {
+                textContent = JSON.stringify(message);
+            }
+        } else if (typeof message === 'object' && message !== null) {
             if (message.detail) {
                 textContent = `Desculpe: ${message.detail}`; // Erro FastAPI
-            } else if (Array.isArray(message) && message.length > 0 && 'titulo' in message[0]) {
-                textContent = message.map(m => m.titulo).join(', '); // Lista de filmes
             } else if ('nome' in message) {
                 textContent = message.nome; // Género
             } else if ('genero' in message && 'contagem' in message) {
@@ -156,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let url = routeIntent(text);
 
         if (!url) {
-            displayMessage('Bot', 'Não entendi. Tente: "filmes por [ATOR]"');
+            displayMessage('Bot', 'Não entendi. Tente: "filmes do [ATOR]"');
             return;
         }
         // Anexa session_id de forma robusta (suporta URLs já com query)

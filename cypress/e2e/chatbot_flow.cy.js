@@ -19,7 +19,7 @@ describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
 
   it('Deve testar a intenção "filmes por ator" (E2E)', () => {
     // 1. Digitar com erro (fuzzy) e submeter via Enter (dataset Netflix)
-    cy.get('#user-input').type('filmes por ator adam sandlr{enter}');
+    cy.get('#user-input').type('filmes por ator adam sandlr {enter}');
     // 2. Verifica se a mensagem do utilizador foi adicionada
     cy.get('#chat-log .user-message').last().should('contain.text', 'filmes por ator adam sandlr');
     // 3. Aguarda resposta do endpoint para garantir rendering
