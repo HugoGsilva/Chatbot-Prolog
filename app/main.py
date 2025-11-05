@@ -178,6 +178,32 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
 
     return response_data
 
+@app.get("/recomendar/aleatorio", response_model=Filme)
+async def recomendar_aleatorio(session_id: str, user_query: str):
+    """
+    Endpoint V2 (Netflix): Retorna um filme aleatório.
+    Recebe o 'user_query' original para fins de histórico.
+    """
+
+    # 1. Nível 3 (Lógica Prolog)
+    query_string = "imdb_rules:random_movie(TituloFilme)"
+    results = prolog_service.query(query_string)
+
+    if not results:
+        raise HTTPException(status_code=404, detail="Não foi possível encontrar um filme aleatório.")
+
+    # 2. Formatar Resposta (Um único objeto Filme)
+    response_data = {"titulo": results[0]["TituloFilme"]}
+
+    # 3. Nível 4 (Memória - Redis)
+    try:
+        await session_service.add_to_history(session_id, f"User: {user_query}")
+        await session_service.add_to_history(session_id, f"Bot: {response_data}")
+    except Exception as e:
+        print(f"[WARN] Falha ao gravar histórico na sessão '{session_id}': {e}")
+
+    return response_data
+
 @app.get("/filmes-por-diretor/{diretor}", response_model=list[Filme])
 async def get_filmes_por_diretor(diretor: str, session_id: str):
     """

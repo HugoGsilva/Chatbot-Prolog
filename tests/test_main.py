@@ -441,3 +441,51 @@ async def test_get_filmes_por_diretor_v2(anyio_backend, monkeypatch: pytest.Monk
     mock_session_service.add_to_history.assert_any_call(
         "sessao_v2_diretor", f"Bot: {data}"
     )
+
+
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@pytest.mark.anyio
+async def test_recomendar_aleatorio_v2(anyio_backend, monkeypatch: pytest.MonkeyPatch):
+    """
+    Testa o novo endpoint V2 (Netflix) /recomendar/aleatorio.
+    Este endpoint não precisa de NLU Nível 2 (fuzzy), apenas Nível 1 (intenção).
+    Deve falhar com 404 até o endpoint ser implementado.
+    """
+
+    # --- Mocking (Apenas Sessão) ---
+    mock_session_service = AsyncMock()
+    mock_session_service.add_to_history = AsyncMock()
+    mock_session_service.test_connection = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.aclose = AsyncMock()
+    mock_session_service.client = mock_client
+    monkeypatch.setattr("app.main.session_service", mock_session_service)
+
+    # --- Execução ---
+    async with LifespanManager(app):  # Inicia o startup "leve"
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            user_query = "Me recomende um filme"  # (O que o Nível 1 irá extrair)
+            params = {
+                "session_id": "sessao_v2_aleatorio",
+                "user_query": user_query,
+            }
+            resp = await client.get("/recomendar/aleatorio", params=params)
+
+    # --- Asserções (TDD "Red") ---
+    assert resp.status_code == 200  # (Isto deve falhar com 404)
+
+    # (Asserções que vão passar quando o 200 OK for corrigido)
+    # (Este endpoint retorna um *único* objeto Filme)
+    data = resp.json()
+    assert isinstance(data, dict)
+    assert "titulo" in data  # Verifica se a chave 'titulo' existe
+
+    # Validar histórico (NLU Nível 1)
+    user_query = "Me recomende um filme"
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_aleatorio", f"User: {user_query}"
+    )
+    mock_session_service.add_to_history.assert_any_call(
+        "sessao_v2_aleatorio", f"Bot: {data}"
+    )

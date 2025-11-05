@@ -11,11 +11,17 @@
 
     % As novas regras de recomendação (o seu pedido)
     recomendar_por_ator_e_genero/3,
-    recomendar_por_dois_generos/3
+    recomendar_por_dois_generos/3,
+
+    % Nova funcionalidade: recomendação aleatória
+    random_movie/1
 
     % (As regras 'get_all_...' já não são necessárias aqui,
     % pois o pipeline ETL (Fase 1) trata disso)
 ]).
+
+% Biblioteca necessária para random_member/2
+:- use_module(library(random)).
 
 % Carrega os novos factos (gerados pelo pipeline ETL)
 :- use_module('../knowledge/imdb_kb.pl').
@@ -75,3 +81,19 @@ recomendar_por_dois_generos(Genero1, Genero2, TituloFilme) :-
 filmes_por_diretor(NomeDiretor, TituloFilme) :-
     imdb_kb:netflix_director(ShowID, NomeDiretor),
     imdb_kb:netflix_title(ShowID, TituloFilme, _).
+
+% --- Nova Regra ---
+
+% random_movie(-TituloFilme)
+% Encontra todos os títulos e escolhe um aleatoriamente.
+random_movie(TituloFilme) :-
+    % 1. Encontra todos os títulos (ignora Ano)
+    findall(
+        Titulo,
+        imdb_kb:netflix_title(_, Titulo, _),
+        ListaDeFilmes
+    ),
+    % Garante que a lista não está vazia
+    ListaDeFilmes \= [],
+    % 2. Escolhe um membro aleatório da lista
+    random_member(TituloFilme, ListaDeFilmes).
