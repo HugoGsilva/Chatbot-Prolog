@@ -1,29 +1,23 @@
 """
-Schemas Pydantic para o contrato de resposta da API FastAPI
-(Fase 3.1 — Middleware FastAPI).
-
-Estes modelos representam as estruturas JSON retornadas pelos endpoints,
-servindo como ponte para as regras do módulo Prolog `sakila_rules`.
+Modelos Pydantic para respostas da API.
+Propósito: Definir o contrato JSON usado pelos endpoints do FastAPI.
 """
 
 from pydantic import BaseModel, Field
 
 
 class Filme(BaseModel):
-    """Schema para representar um único filme."""
-
+    """Representa um filme com o campo 'titulo'."""
     titulo: str = Field(..., description="Título do filme")
 
 
 class Genero(BaseModel):
-    """Schema para representar um único gênero de filme."""
-
+    """Representa um género de filme com o campo 'nome'."""
     nome: str = Field(..., description="Nome do gênero")
 
 
 class ContagemGenero(BaseModel):
-    """Schema para representar a contagem de filmes por gênero e ano."""
-
+    """Representa a contagem de filmes por género e ano."""
     genero: str = Field(..., description="Nome do gênero")
     ano: int = Field(..., description="Ano de lançamento")
     contagem: int = Field(..., description="Número de filmes no ano/gênero")

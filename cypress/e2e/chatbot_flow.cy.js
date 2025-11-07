@@ -1,4 +1,7 @@
-// cypress/e2e/chatbot_flow.cy.js
+/**
+ * Testes E2E que verificam o fluxo completo do chatbot:
+ * carregamento, intenções principais e respostas esperadas para o dataset.
+ */
 describe('Fluxo Completo do Chatbot Sakila-Prolog', () => {
 
   beforeEach(() => {

@@ -1,4 +1,5 @@
-# --- Fase 1: Builder (Instalação de Dependências) ---
+# multi-stage Dockerfile para construir e executar a aplicação FastAPI com SWI-Prolog.
+
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
@@ -22,7 +23,6 @@ RUN python -m venv /opt/testvenv \
  && /opt/testvenv/bin/pip install --upgrade pip \
  && /opt/testvenv/bin/pip install pytest asgi-lifespan mysql-connector-python
 
-# --- Fase 2: Final (Produção) ---
 FROM python:3.11-slim AS final
 
 WORKDIR /app

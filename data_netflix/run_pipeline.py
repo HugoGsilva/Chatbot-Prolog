@@ -1,3 +1,8 @@
+"""
+ETL pipeline para importar dados Netflix -> MySQL, gerar factos Prolog
+e pré-carregar caches NLU no Redis.
+"""
+
 import time
 import os
 import sys
@@ -22,7 +27,8 @@ PROLOG_FACTS_PATH = "/app/prolog/knowledge/imdb_kb.pl" # (O volume montado)
 
 def wait_for_services(retries=30, delay=5):
     """
-    [FIX 2] Loop de "retry" para esperar que o MySQL e o Redis fiquem prontos.
+    Espera que MySQL e Redis fiquem disponíveis e devolve engine Redis.
+    Propósito: Garantir que serviços dependentes estejam prontos antes do ETL.
     """
     print("[Pipeline] A aguardar pelos serviços (MySQL, Redis)...")
 
@@ -59,7 +65,10 @@ def wait_for_services(retries=30, delay=5):
     return db_engine, r
 
 def execute_sql_script(engine, script_path):
-    """Executa o script SQL para criar as tabelas."""
+    """
+    Executa um script SQL para criar/atualizar o esquema no MySQL.
+    Propósito: Preparar tabelas necessárias para o carregamento.
+    """
     print(f"[Pipeline] A executar script SQL: {script_path}")
     with open(script_path, 'r') as f:
         sql_script = f.read()
@@ -72,9 +81,11 @@ def execute_sql_script(engine, script_path):
     print("[Pipeline] Tabelas SQL criadas.")
 
 def load_csv_to_mysql(engine, csv_path):
-    """Usa Pandas para ler o CSV 'sujo' e carregar para o MySQL."""
+    """
+    Lê CSV sujo, processa colunas essenciais e carrega para a tabela netflix_titles.
+    Propósito: Popular a base MySQL com dados brutos do dataset.
+    """
     print(f"[Pipeline] A ler CSV: {csv_path}")
-    # Usar o 'low_memory=False' (sugestão do seu relatório V4.1) é bom
     try:
         df = pd.read_csv(csv_path)
 
@@ -99,7 +110,9 @@ def load_csv_to_mysql(engine, csv_path):
 
 def generate_prolog_and_caches(engine, redis_client, prolog_path):
     """
-    Executa queries SQL, gera o ficheiro .pl e pré-aquece as caches NLU no Redis.
+    Gera o ficheiro de factos Prolog a partir do conteúdo da DB
+    e guarda caches NLU (atores, géneros, filmes, diretores) no Redis.
+    Propósito: Produzir o KB usado pelo motor Prolog e acelerar NLU.
     """
     print("[Pipeline] A gerar factos Prolog e caches NLU...")
 

@@ -1,3 +1,7 @@
+/**
+ * Inicializa a interface do chatbot, define intenções fuzzy+regex,
+ * gere sessão local e ligacoes a endpoints do backend.
+ */
 document.addEventListener('DOMContentLoaded', () => {
     // Referências DOM (IDs ANTIGOS, que funcionam com o HTML do Prompt 1)
     const chatLog = document.getElementById('chat-log');
@@ -77,7 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const SESSION_ID = generateSessionId();
 
-    // --- FUNÇÃO DE DISPLAY (AJUSTADA PARA O NOVO CSS) ---
+    /**
+     * Mostra mensagens no log do chat.
+     * Propósito: Formatar e renderizar respostas de utilizador/bot, suportando objetos e listas.
+     */
     function displayMessage(sender, message) {
         // CRIA O <p> (Mapeado para .chat-message)
         const p = document.createElement('p');
@@ -140,7 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // --- FUNÇÃO DE ROTEAMENTO (Precedência para intenções compostas) ---
+    /**
+     * Roteador de intenções que aplica precedência para padrões compostos,
+     * fallback para Fuse.js e devolve a URL do endpoint correspondente.
+     */
     function routeIntent(message) {
         const msg = message.trim();
 
@@ -166,7 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return bestIntent.template(matches);
     }
 
-    // --- FUNÇÃO DE ENVIO (Inalterada) ---
+    /**
+     * Envia a mensagem do utilizador ao backend, trata erros e renderiza resposta.
+     * Propósito: Orquestrar chamada fetch e persistir histórico de sessão localmente.
+     */
     async function handleSendMessage() {
         const text = userInput.value.trim();
         if (!text) return;

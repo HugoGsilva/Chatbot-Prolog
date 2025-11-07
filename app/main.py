@@ -1,3 +1,8 @@
+"""
+Aplicação FastAPI que expõe endpoints para consultar o KB Prolog
+e serve o frontend estático. Carrega regras Prolog e caches NLU no arranque.
+"""
+
 import os
 import json
 import csv
@@ -20,6 +25,10 @@ from .schemas import Filme, Genero, ContagemGenero
 
 # --- Helper: fallback para carregar caches NLU do CSV ---
 def load_nlu_caches_from_csv(csv_path: str) -> tuple[int, int, int, int]:
+    """
+    Fallback para carregar caches NLU a partir do CSV.
+    Propósito: Popular ACTOR/GENRE/FILM/DIRECTOR caches caso Redis não contenha as caches.
+    """
     actor_set: set[str] = set()
     genre_set: set[str] = set()
     film_set: set[str] = set()
@@ -59,10 +68,9 @@ def load_nlu_caches_from_csv(csv_path: str) -> tuple[int, int, int, int]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Rotina de startup e shutdown "Leve".
-    - NÃO executa o ETL.
-    - Carrega as regras Prolog V2 (imdb_rules) do disco.
-    - Carrega as caches NLU (V2) do REDIS.
+    Rotina de startup/shutdown da aplicação.
+    Propósito: Inicializar motor Prolog, carregar caches NLU do Redis (ou fallback CSV)
+    e verificar a ligação ao Redis para sessões.
     """
     print("[Startup] Iniciando API e carregando motor Prolog (V2)...")
 
@@ -132,6 +140,7 @@ STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fron
 
 @app.get("/", response_class=FileResponse)
 async def read_index():
+    """Serve o ficheiro index.html do frontend."""
     return os.path.join(STATIC_DIR, "index.html")
 
 @app.get("/health")
@@ -148,8 +157,8 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.get("/filmes-por-ator/{nome_ator}", response_model=list[Filme])
 async def get_filmes_por_ator(nome_ator: str, session_id: str):
     """
-    Endpoint V2 (Netflix): Retorna filmes para um ator,
-    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    Endpoint: retorna filmes de um ator fornecido.
+    Propósito: Resolver entidade via NLU, consultar Prolog e persistir histórico na sessão.
     """
 
     # 1. NLU Nível 2 (Resolver Entidade)
@@ -181,8 +190,8 @@ async def get_filmes_por_ator(nome_ator: str, session_id: str):
 @app.get("/recomendar/aleatorio", response_model=Filme)
 async def recomendar_aleatorio(session_id: str, user_query: str):
     """
-    Endpoint V2 (Netflix): Retorna um filme aleatório.
-    Recebe o 'user_query' original para fins de histórico.
+    Endpoint: retorna um filme aleatório.
+    Propósito: Selecionar um filme via Prolog e gravar histórico da sessão.
     """
 
     # 1. Nível 3 (Lógica Prolog)
@@ -207,8 +216,8 @@ async def recomendar_aleatorio(session_id: str, user_query: str):
 @app.get("/filmes-por-diretor/{diretor}", response_model=list[Filme])
 async def get_filmes_por_diretor(diretor: str, session_id: str):
     """
-    Endpoint V2 (Netflix): Retorna filmes para um diretor, 
-    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    Endpoint: retorna filmes de um diretor.
+    Propósito: Resolver entidade via NLU e consultar o Prolog.
     """
 
     # 1. NLU Nível 2
@@ -243,8 +252,8 @@ async def get_filmes_por_diretor(diretor: str, session_id: str):
 @app.get("/recomendar/ator-e-genero", response_model=list[Filme])
 async def recomendar_por_ator_e_genero(ator: str, genero: str, session_id: str):
     """
-    Endpoint V2 (Netflix): Recomendação composta (Ator E Género).
-    Usa fuzzy matching Nível 2 e lógica Prolog Nível 3.
+    Endpoint: recomendação composta por ator e género.
+    Propósito: Combinar resultados NLU e Prolog para filtrar títulos.
     """
 
     # 1. NLU Nível 2 (Resolver Entidades)
@@ -284,8 +293,8 @@ async def recomendar_por_ator_e_genero(ator: str, genero: str, session_id: str):
 @app.get("/contar-filmes", response_model=ContagemGenero)
 async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str):
     """
-    Endpoint V2 (Netflix): Conta filmes por género e ano,
-    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
+    Endpoint: conta filmes por género e ano.
+    Propósito: Retornar contagem consistente usando regra Prolog de contagem.
     """
 
     # 1. NLU Nível 2 (Resolver Entidade)
@@ -331,10 +340,7 @@ async def contar_filmes_por_genero_e_ano(genero: str, ano: int, session_id: str)
 # (Fase 4.4: Implementação do endpoint por gênero)
 @app.get("/filmes-por-genero/{genero}", response_model=list[Filme])
 async def get_filmes_por_genero(genero: str, session_id: str):
-    """
-    Endpoint V2 (Netflix): Retorna filmes para um género,
-    usando fuzzy matching (Nível 2) e lógica Prolog (Nível 3).
-    """
+    """Endpoint: retorna filmes por género."""
 
     # 1. NLU Nível 2 (Resolver Entidade)
     best_match_genre = find_best_genre(genero)  # (Lida com PT/EN e fuzzy)
@@ -369,9 +375,7 @@ async def get_filmes_por_genero(genero: str, session_id: str):
 # (Fase 4.6: Implementação do endpoint gênero do filme)
 @app.get("/genero-do-filme/{titulo_filme}", response_model=list[Genero])
 async def get_genero_do_filme(titulo_filme: str, session_id: str):
-    """
-    Endpoint V2 (Netflix): Retorna TODOS os géneros de um filme.
-    """
+    """Endpoint: retorna géneros associados a um título."""
 
     # 1. NLU Nível 2 (Resolver Entidade)
     best_match_film = find_best_film(titulo_filme)
@@ -412,10 +416,7 @@ async def get_genero_do_filme(titulo_filme: str, session_id: str):
 
 @app.get("/recomendar/dois-generos", response_model=list[Filme])
 async def recomendar_por_dois_generos(genero1: str, genero2: str, session_id: str):
-    """
-    Endpoint V2 (Netflix): Recomendação composta (Género E Género).
-    Usa fuzzy matching Nível 2 e lógica Prolog Nível 3.
-    """
+    """Endpoint: retorna filmes que combinam dois géneros."""
 
     # 1. NLU Nível 2 (Resolver Entidades)
     best_match_genre1 = find_best_genre(genero1)
