@@ -25,7 +25,7 @@ SQL_INIT_PATH = "/app/data_netflix/init_netflix.sql"
 PROLOG_FACTS_PATH = "/app/prolog/knowledge/imdb_kb.pl" # (O volume montado)
 
 
-def wait_for_services(retries=30, delay=5):
+def wait_for_services(retries=60, delay=5):
     """
     Espera que MySQL e Redis fiquem disponíveis e devolve engine Redis.
     Propósito: Garantir que serviços dependentes estejam prontos antes do ETL.
