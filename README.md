@@ -20,10 +20,10 @@ O sistema é orquestrado com `docker-compose` e utiliza 4 serviços principais:
   - Expõe a API REST (por exemplo, `/filmes-por-ator`, `/filmes-por-genero`, `/genero-do-filme`, `/recomendar-por-ator`).
   - Persiste o histórico de sessão no `redis`.
   - No startup (via `lifespan`):
-    1. Executa `backend/scripts/run_export_subset.py` para consultar o MySQL.
-    2. Converte os dados SQL num ficheiro de factos Prolog (`prolog/knowledge/sakila.pl`).
-    3. Inicia o motor SWI-Prolog (via `pyswip`), carrega as regras (`prolog/rules/inferencia.pl`) e os factos (`sakila.pl`).
-    4. Carrega caches de Nível 2 (Atores, Géneros, Filmes) do Prolog para a memória do Python.
+    1. Conecta ao Redis e carrega as caches de NLU pré-calculadas.
+    2. Inicia o motor SWI-Prolog (via `pyswip`).
+    3. Carrega as regras (`prolog/rules/inferencia.pl`) e os factos (`prolog/knowledge/imdb_kb.pl`).
+    4. Inicia o servidor Uvicorn na porta 8000.
 
 Notas de logs:
 - Os logs de arranque confirmam caches e ligação ao Redis; o serviço `app` está configurado com `PYTHONUNBUFFERED=1` para evitar buffering e mostrar mensagens em tempo real.
@@ -121,9 +121,9 @@ O bot entende os seguintes padrões (e variações com typos):
 
 - `app/` — FastAPI e serviços (NLU, sessão, Prolog service).
 - `frontend/` — `index.html`, `main.js`, `style.css` do chatbot.
-- `prolog/` — Regras (`rules/inferencia.pl`) e conhecimento (`knowledge/sakila.pl`).
-- `db/init/` — Scripts SQL (schema e dados Sakila).
-- `backend/scripts/` — Exportadores para gerar factos a partir de MySQL.
+- `prolog/` — Regras (`rules/inferencia.pl`) e conhecimento (`knowledge/imdb_kb.pl`).
+- `data_netflix/` — Pipeline ETL (CSV → MySQL → Prolog → Redis).
+- `cypress/` — Testes E2E.
 - `cypress/` — Testes E2E.
 - `docker-compose.yml` — Orquestração de serviços.
 
