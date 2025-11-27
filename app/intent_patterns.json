@@ -1,0 +1,149 @@
+{
+    "filmes_por_ator": {
+        "keywords": [
+            "filmes",
+            "filme",
+            "movies",
+            "movie",
+            "obras"
+        ],
+        "prepositions": [
+            "por",
+            "de",
+            "do",
+            "da",
+            "com",
+            "estrelando"
+        ],
+        "entity_type": "PERSON",
+        "examples": [
+            "filmes por tom hanks",
+            "filmes do penélope cruz",
+            "filme com brad pitt"
+        ]
+    },
+    "filmes_por_genero": {
+        "keywords": [
+            "filmes",
+            "filme",
+            "movies"
+        ],
+        "prepositions": [
+            "de",
+            "do",
+            "da"
+        ],
+        "entity_type": "GENRE",
+        "examples": [
+            "filmes de ação",
+            "filmes do gênero drama",
+            "filme terror"
+        ]
+    },
+    "filmes_por_diretor": {
+        "keywords": [
+            "filmes",
+            "filme",
+            "obras"
+        ],
+        "prepositions": [
+            "por",
+            "de",
+            "do",
+            "dirigidos",
+            "direção"
+        ],
+        "entity_type": "PERSON",
+        "examples": [
+            "filmes por spielberg",
+            "filmes dirigidos por nolan"
+        ]
+    },
+    "genero_do_filme": {
+        "keywords": [
+            "gênero",
+            "genero",
+            "tipo",
+            "categoria"
+        ],
+        "prepositions": [
+            "de",
+            "do",
+            "da"
+        ],
+        "entity_type": "MOVIE",
+        "examples": [
+            "gênero de inception",
+            "qual gênero do filme matrix"
+        ]
+    },
+    "recomendar_filme": {
+        "keywords": [
+            "recomendar",
+            "recomendação",
+            "recomende",
+            "sugira",
+            "sugestão"
+        ],
+        "prepositions": [
+            "de",
+            "por",
+            "com"
+        ],
+        "entity_type": "MIXED",
+        "examples": [
+            "recomendar filmes de ação",
+            "recomendação por tom hanks"
+        ]
+    },
+    "contar_filmes": {
+        "keywords": [
+            "quantos",
+            "contar",
+            "número",
+            "quantidade"
+        ],
+        "prepositions": [
+            "de",
+            "do",
+            "em"
+        ],
+        "entity_type": "MIXED",
+        "examples": [
+            "quantos filmes de drama em 2020",
+            "contar filmes de ação"
+        ]
+    },
+    "filme_aleatorio": {
+        "keywords": [
+            "aleatório",
+            "aleatorio",
+            "random",
+            "sortear",
+            "qualquer"
+        ],
+        "prepositions": [],
+        "entity_type": "NONE",
+        "examples": [
+            "filme aleatório",
+            "me mostre qualquer filme"
+        ]
+    },
+    "filmes_com_filtros": {
+        "keywords": [
+            "filmes",
+            "filme"
+        ],
+        "prepositions": [
+            "com",
+            "de",
+            "que"
+        ],
+        "entity_type": "MIXED",
+        "multiple_entities": true,
+        "examples": [
+            "filmes com tom hanks de drama",
+            "filmes de ação com explosões"
+        ]
+    }
+}

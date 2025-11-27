@@ -4,3 +4,4 @@ uvicorn[standard]
 pyswip
 redis
 thefuzz[speedup]
+spacy>=3.7

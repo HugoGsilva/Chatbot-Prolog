@@ -18,6 +18,9 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
+# Instala modelo spaCy português para NLU
+RUN python -m spacy download pt_core_news_sm
+
 # Instala dependências de TESTE (para uso do builder)
 RUN python -m venv /opt/testvenv \
  && /opt/testvenv/bin/pip install --upgrade pip \

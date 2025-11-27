@@ -7,6 +7,15 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends default-libmysqlclient-dev gcc swi-prolog && \
     rm -rf /var/lib/apt/lists/*
+# Este Dockerfile é SÓ para o serviço 'db-init' (Pipeline ETL)
+FROM python:3.11-slim
+WORKDIR /app
+
+# 1. Instala dependências de sistema (cliente MySQL, gcc, etc.)
+# (Necessário para o mysql-connector-python e pyswip)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends default-libmysqlclient-dev gcc swi-prolog && \
+    rm -rf /var/lib/apt/lists/*
 
 # 2. Instala as dependências Python (ETL) [FIX 2]
 # (Assume que requirements-etl.txt está na raiz)
@@ -16,8 +25,6 @@ RUN pip install --upgrade pip && pip install -r requirements-etl.txt
 # 3. Copia os ficheiros de dados e scripts necessários para o pipeline
 # (O docker-compose montará o volume de output /prolog/knowledge)
 COPY data_netflix/ /app/data_netflix/
-
-# (Não precisamos de COPY backend/scripts/ - FIX 3)
 
 # 4. Define o ponto de entrada padrão (apenas para referência,
 #    pois o docker-compose.yml irá substituí-lo)
