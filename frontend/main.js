@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const hoursOld = age / (1000 * 60 * 60);
             
             if (hoursOld > 23) {
-                console.log('[Session] Sessão com mais de 23h, criando nova...');
                 sessionId = null;
             }
         }
@@ -51,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionId = data.session_id;
                     localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
                     localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
-                    console.log('[Session] Nova sessão criada:', sessionId);
                 } else {
                     // Fallback: gerar ID localmente se servidor falhar
                     sessionId = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -471,9 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Inicializa sessão ao carregar
-    getOrCreateSessionId().then(sessionId => {
-        console.log('[Init] Sessão ativa:', sessionId);
-    });
+    getOrCreateSessionId();
 
     // Focus no input
     userInput.focus();
