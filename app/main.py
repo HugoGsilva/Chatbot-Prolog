@@ -7,7 +7,7 @@ import os
 import json
 import csv
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -28,11 +28,13 @@ from .schemas import ChatRequest, ChatResponse
 from .spell_corrector import SpellCorrector
 from .nlu_engine import NLUEngine
 from .intent_router import IntentRouter
+from .rate_limiter import RateLimiter, check_rate_limit, RateLimitExceeded
 
 # --- Singletons Thin Client ---
 spell_corrector: SpellCorrector = None
 nlu_engine: NLUEngine = None
 intent_router: IntentRouter = None
+rate_limiter: RateLimiter = None
 
 # --- Helper: fallback para carregar caches NLU do CSV ---
 def load_nlu_caches_from_csv(csv_path: str) -> tuple[int, int, int, int]:
@@ -129,7 +131,7 @@ async def lifespan(app: FastAPI):
         print(f"[Startup] [AVISO] Redis indisponível, prosseguindo sem sessão: {e}")
 
     # 4. Inicializar Singletons Thin Client (Fase 2)
-    global spell_corrector, nlu_engine, intent_router
+    global spell_corrector, nlu_engine, intent_router, rate_limiter
     
     print("[Startup] Inicializando componentes Thin Client...")
     
@@ -150,6 +152,10 @@ async def lifespan(app: FastAPI):
     # 4.3 IntentRouter
     intent_router = IntentRouter()
     print("[Startup] IntentRouter inicializado.")
+    
+    # 4.4 RateLimiter (20 req/min por IP, 10 req/min por sessão)
+    rate_limiter = RateLimiter(session_service.client)
+    print("[Startup] RateLimiter inicializado (20 req/min por IP, 10 req/min por sessão).")
 
     print("\n--- SERVIÇO 'app' PRONTO (Thin Client Habilitado) ---")
     yield  # A API arranca aqui
@@ -186,23 +192,29 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # --- ENDPOINT THIN CLIENT (Fase 2) ---
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(chat_request: ChatRequest, request: Request):
     """
     Endpoint unificado para chat Thin Client.
     
     Processa mensagem do usuário através do pipeline:
-    1. SpellCorrector -> Correção ortográfica
-    2. NLUEngine -> Detecção de intenção e extração de entidades
-    3. IntentRouter -> Roteamento para handler apropriado
-    4. ResponseFormatter -> Formatação padronizada
+    1. Rate limiting (20 req/min por IP, 10 req/min por sessão)
+    2. Validação de sessão (recria se expirada)
+    3. SpellCorrector -> Correção ortográfica
+    4. NLUEngine -> Detecção de intenção e extração de entidades
+    5. IntentRouter -> Roteamento para handler apropriado
+    6. Persistência no histórico da sessão
     
     Args:
-        request: ChatRequest com message e session_id
+        chat_request: ChatRequest com message e session_id
+        request: FastAPI Request para obter IP do cliente
         
     Returns:
         ChatResponse estruturada com type, content, suggestions, metadata
+        
+    Raises:
+        HTTPException 429: Se rate limit excedido
     """
-    global nlu_engine, intent_router
+    global nlu_engine, intent_router, rate_limiter
     
     if not nlu_engine or not intent_router:
         return ChatResponse(
@@ -213,27 +225,47 @@ async def chat_endpoint(request: ChatRequest):
         )
     
     try:
-        # 1. Processar NLU (já inclui correção ortográfica)
-        nlu_result = nlu_engine.parse(request.message)
+        # 0. Verificar rate limit (IP + sessão)
+        if rate_limiter:
+            client_ip = request.client.host if request.client else "unknown"
+            try:
+                await check_rate_limit(rate_limiter, client_ip, chat_request.session_id)
+            except RateLimitExceeded as e:
+                raise HTTPException(
+                    status_code=429,
+                    detail=str(e),
+                    headers={"Retry-After": "60"}
+                )
         
-        # 2. Rotear para handler apropriado
-        response = await intent_router.route(nlu_result, request.session_id)
+        # 1. Validar/recriar sessão se necessário
+        session_existed = await session_service.ensure_session_exists(chat_request.session_id)
+        if not session_existed:
+            print(f"[INFO] Sessão '{chat_request.session_id}' foi recriada (expirada ou nova)")
         
-        # 3. Salvar no histórico da sessão
+        # 2. Processar NLU (já inclui correção ortográfica)
+        nlu_result = nlu_engine.parse(chat_request.message)
+        
+        # 3. Rotear para handler apropriado
+        response = await intent_router.route(nlu_result, chat_request.session_id)
+        
+        # 4. Salvar no histórico da sessão
         try:
             await session_service.add_to_history(
-                request.session_id, 
-                f"User: {request.message}"
+                chat_request.session_id, 
+                f"User: {chat_request.message}"
             )
             await session_service.add_to_history(
-                request.session_id,
+                chat_request.session_id,
                 f"Bot: {response.content}"
             )
         except Exception as e:
-            print(f"[WARN] Falha ao gravar histórico na sessão '{request.session_id}': {e}")
+            print(f"[WARN] Falha ao gravar histórico na sessão '{chat_request.session_id}': {e}")
         
         return response
         
+    except HTTPException:
+        # Re-raise HTTPExceptions (como rate limit 429)
+        raise
     except Exception as e:
         print(f"[ERROR] Erro no endpoint /chat: {e}")
         return ChatResponse(
@@ -242,6 +274,88 @@ async def chat_endpoint(request: ChatRequest):
             suggestions=["Tente reformular sua pergunta", "Digite 'ajuda' para ver comandos disponíveis"],
             metadata={"error": str(e)}
         )
+
+
+# --- ENDPOINTS DE SESSÃO (Fase 2 - Task 10) ---
+
+@app.post("/session/create")
+async def create_session():
+    """
+    Cria uma nova sessão e retorna o session_id.
+    
+    O Frontend deve chamar este endpoint para obter um session_id
+    antes de iniciar uma conversa.
+    
+    Returns:
+        Dict com session_id gerado
+    """
+    try:
+        session_id = await session_service.create_session()
+        return {
+            "session_id": session_id,
+            "ttl_seconds": 86400,  # 24 horas
+            "message": "Sessão criada com sucesso"
+        }
+    except Exception as e:
+        print(f"[ERROR] Erro ao criar sessão: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar sessão")
+
+
+@app.delete("/session/{session_id}")
+async def delete_session(session_id: str):
+    """
+    Remove uma sessão e seu histórico.
+    
+    Args:
+        session_id: ID da sessão a remover
+        
+    Returns:
+        Dict com status da operação
+    """
+    try:
+        deleted = await session_service.delete_session(session_id)
+        if deleted:
+            return {"message": "Sessão removida com sucesso", "session_id": session_id}
+        else:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erro ao remover sessão: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao remover sessão")
+
+
+@app.get("/session/{session_id}/history")
+async def get_session_history(session_id: str, limit: int = 10):
+    """
+    Retorna o histórico de mensagens de uma sessão.
+    
+    Args:
+        session_id: ID da sessão
+        limit: Número máximo de mensagens a retornar (default: 10)
+        
+    Returns:
+        Dict com histórico de mensagens
+    """
+    try:
+        exists = await session_service.session_exists(session_id)
+        if not exists:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+        
+        history = await session_service.get_history(session_id, limit)
+        ttl = await session_service.get_session_ttl(session_id)
+        
+        return {
+            "session_id": session_id,
+            "history": history,
+            "count": len(history),
+            "ttl_seconds": ttl
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erro ao buscar histórico: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar histórico")
 
 
 # --- ENDPOINTS (V2) ---

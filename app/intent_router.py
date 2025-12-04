@@ -15,7 +15,7 @@ from typing import Callable, Dict, List, Optional, Any
 
 from .schemas import NLUResult, ChatResponse, ResponseType
 from .nlu import find_best_actor, find_best_genre, find_best_film, find_best_director
-from .prolog_service import prolog_service
+from .prolog_service import prolog_service, PrologTimeoutError
 from .session_manager import session_service
 
 logger = logging.getLogger(__name__)
@@ -107,6 +107,31 @@ class IntentRouter:
         """Retorna lista de intenções suportadas."""
         return list(self._handlers.keys())
     
+    async def _query_prolog(self, query_string: str, timeout: float = 2.0) -> List[Dict]:
+        """
+        Helper para executar query Prolog com timeout.
+        
+        Args:
+            query_string: Query Prolog
+            timeout: Timeout em segundos
+            
+        Returns:
+            Lista de resultados
+            
+        Raises:
+            PrologTimeoutError: Se exceder timeout
+        """
+        return await prolog_service.query_with_timeout(query_string, timeout)
+    
+    def _create_timeout_response(self) -> ChatResponse:
+        """Cria resposta de erro para timeout do Prolog."""
+        return ChatResponse(
+            type=ResponseType.ERROR,
+            content="A consulta está demorando muito. Tente uma busca mais específica.",
+            suggestions=["filmes do Brad Pitt", "filmes de ação", "filme aleatório"],
+            metadata={"error_code": "PROLOG_TIMEOUT"}
+        )
+    
     # =========================================================================
     # HANDLERS DE INTENÇÃO
     # =========================================================================
@@ -140,9 +165,12 @@ class IntentRouter:
                 suggestions=[f"filmes por {ator.title()}", "filmes de ação"],
             )
         
-        # Consulta Prolog
-        query_string = f"imdb_rules:filmes_por_ator('{best_match}', TituloFilme)"
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            query_string = f"imdb_rules:filmes_por_ator('{best_match}', TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -156,7 +184,7 @@ class IntentRouter:
         return ChatResponse(
             type=ResponseType.LIST,
             content=filmes,
-            suggestions=[f"filmes de drama", f"gênero de {filmes[0]['titulo']}" if filmes else None],
+            suggestions=["filmes de drama", f"gênero de {filmes[0]['titulo']}" if filmes else None],
         )
     
     async def handle_filmes_por_genero(
@@ -184,10 +212,13 @@ class IntentRouter:
                 suggestions=["filmes de ação", "filmes de drama"],
             )
         
-        # Consulta Prolog
-        genre_query = best_match.upper()
-        query_string = f"imdb_rules:filmes_por_genero('{genre_query}', TituloFilme)"
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            genre_query = best_match.upper()
+            query_string = f"imdb_rules:filmes_por_genero('{genre_query}', TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -227,10 +258,13 @@ class IntentRouter:
                 suggestions=["filmes do diretor Spielberg"],
             )
         
-        # Consulta Prolog
-        director_query = best_match.upper()
-        query_string = f"imdb_rules:filmes_por_diretor('{director_query}', TituloFilme)"
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            director_query = best_match.upper()
+            query_string = f"imdb_rules:filmes_por_diretor('{director_query}', TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -269,12 +303,15 @@ class IntentRouter:
                 content=f"Não encontrei o filme '{filme}' na base de dados.",
             )
         
-        # Consulta Prolog
-        query_string = (
-            f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
-            f"Upper = '{best_match}', imdb_kb:netflix_genre(ID, NomeGenero)"
-        )
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            query_string = (
+                f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
+                f"Upper = '{best_match}', imdb_kb:netflix_genre(ID, NomeGenero)"
+            )
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -295,8 +332,11 @@ class IntentRouter:
         session_id: str
     ) -> ChatResponse:
         """Handler para intenção 'filme_aleatorio'."""
-        query_string = "imdb_rules:random_movie(TituloFilme)"
-        results = prolog_service.query(query_string)
+        try:
+            query_string = "imdb_rules:random_movie(TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -344,10 +384,13 @@ class IntentRouter:
                 content="Não encontrei o ator ou gênero especificado.",
             )
         
-        # Consulta Prolog
-        actor_query = best_actor.upper()
-        query_string = f"imdb_rules:recomendar_por_ator_e_genero('{actor_query}', '{best_genre}', TituloFilme)"
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            actor_query = best_actor.upper()
+            query_string = f"imdb_rules:recomendar_por_ator_e_genero('{actor_query}', '{best_genre}', TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -388,9 +431,12 @@ class IntentRouter:
                 content="Não encontrei um ou ambos os gêneros especificados.",
             )
         
-        # Consulta Prolog
-        query_string = f"imdb_rules:recomendar_por_dois_generos('{best_genre1}', '{best_genre2}', TituloFilme)"
-        results = prolog_service.query(query_string)
+        # Consulta Prolog com timeout
+        try:
+            query_string = f"imdb_rules:recomendar_por_dois_generos('{best_genre1}', '{best_genre2}', TituloFilme)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results:
             return ChatResponse(
@@ -439,7 +485,10 @@ class IntentRouter:
             # Contagem apenas por gênero (sem ano)
             query_string = f"imdb_rules:contar_filmes_por_genero('{genre_query}', Contagem)"
         
-        results = prolog_service.query(query_string)
+        try:
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
         
         if not results or "Contagem" not in results[0]:
             return ChatResponse(
