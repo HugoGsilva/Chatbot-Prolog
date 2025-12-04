@@ -5,3 +5,4 @@ pyswip
 redis
 thefuzz[speedup]
 spacy>=3.7
+symspellpy>=6.7.0

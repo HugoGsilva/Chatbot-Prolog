@@ -2,3 +2,15 @@
 Fluxograma.md
 Structure.md
 relatorio.md
+
+# Arquivos de configuração
+.vscode/
+.env
+.DS_Store
+node_modules/
+.kiro
+
+# Build e dependências
+dist/
+build/
+*.log
