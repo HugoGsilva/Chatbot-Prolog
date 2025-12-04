@@ -1,234 +1,480 @@
 /**
- * Inicializa a interface do chatbot, define intenções fuzzy+regex,
- * gere sessão local e ligacoes a endpoints do backend.
+ * Frontend Thin Client para o Chatbot Netflix-Prolog.
+ * 
+ * Fase 3 - Arquitetura Thin Client:
+ * - Toda lógica de NLU, roteamento e processamento está no backend
+ * - Frontend apenas envia texto bruto e renderiza respostas estruturadas
+ * - Sessão gerida pelo servidor com TTL de 24h
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // Referências DOM (IDs ANTIGOS, que funcionam com o HTML do Prompt 1)
+    // --- REFERÊNCIAS DOM ---
     const chatLog = document.getElementById('chat-log');
     const userInput = document.getElementById('user-input');
     const sendButton = document.getElementById('send-button');
-    const chatWindow = document.getElementById('chat-window'); // Para o scroll
+    const chatWindow = document.getElementById('chat-window');
+    const clearButton = document.getElementById('clear-button');
 
-    // --- BANCO DE INTENÇÕES (Híbrido - Completo) ---
-    const intentPrototypes = [
-        // Novas intenções compostas (V2) — posicionadas antes das genéricas
-        {
-            phrase: "filme de GENERO com ATOR",
-            // RegEx solto: procura "...de [genero] com [ator]" (com "ator/atriz" opcional)
-            regex: /de\s+(.+)\s+com\s+(?:(ator|atriz)\s+)?(.+)$/i,
-            // Template para o novo endpoint V2
-            template: (matches) => `/recomendar/ator-e-genero?genero=${encodeURIComponent(matches[1])}&ator=${encodeURIComponent(matches[3])}`
-        },
-        {
-            phrase: "filme de GENERO e GENERO",
-            // RegEx solto: procura "...de [genero1] e [genero2]"
-            regex: /de\s+(.+)\s+e\s+(.+)$/i,
-            // Template para o novo endpoint V2
-            template: (matches) => `/recomendar/dois-generos?genero1=${encodeURIComponent(matches[1])}&genero2=${encodeURIComponent(matches[2])}`
-        },
-        {
-            phrase: "contar filmes de GENERO em ANO",
-            regex: /de\s+(.+)\s+em\s+(\d{4})$/i,
-            template: (matches) => `/contar-filmes?genero=${encodeURIComponent(matches[1])}&ano=${matches[2]}`
-        },
-        {
-            phrase: "recomendar com base em ATOR",
-            regex: /(com\s+base\s+em|baseado\s+em|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
-            // Alinha com backend disponível (fallback para listagem por ator)
-            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}`
-        },
-        {
-            phrase: "filmes do diretor DIRETOR",
-            // RegEx solto: Procura "...(do/de/pelo) (diretor/realizador) [ENTIDADE]"
-            // O Fuse.js tratará de variações como "flmes do diretor..."
-            regex: /(?:do|de|pelo)\s+(?:diretor|realizador)\s+(.+)$/i,
-            template: (matches) => `/filmes-por-diretor/${encodeURIComponent(matches[1])}`
-        },
-        {
-            phrase: "filmes por ATOR",
-            regex: /(por|do|de|pelo|da)\s+(?:(ator|atriz)\s+)?(.+)$/i,
-            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[3])}` 
-        },
-        {
-            phrase: "filme com ator ATOR",
-            // RegEx flexível: aceita "com o/a" e "ator/atriz" como opcionais
-            regex: /com\s+(?:o\s+|a\s+)?(?:ator\s+|atriz\s+)?(.+)$/i,
-            template: (matches) => `/filmes-por-ator/${encodeURIComponent(matches[1])}`
-        },
-        {
-            phrase: "gênero do FILME",
-            // Exige prefixo explícito "genero"/"gênero" para não colidir com "filmes de GENERO"
-            regex: /(?:genero|gênero)\s+(?:do|de)\s+(.+)$/i,
-            template: (matches) => `/genero-do-filme/${encodeURIComponent(matches[1])}`
-        },
-        {
-            phrase: "filmes de GENERO",
-            regex: /de\s+(?!ator\s|atriz\s)(.+)$/i,
-            template: (matches) => `/filmes-por-genero/${encodeURIComponent(matches[1])}`
-        }
-    ];
-
-    // --- INICIALIZAR O FUSE.JS ---
-    const fuseOptions = {
-      keys: ['phrase'],
-      threshold: 0.6 // Nível de tolerância
-    };
-    const fuse = new Fuse(intentPrototypes, fuseOptions);
+    // --- CONFIGURAÇÃO ---
+    const API_BASE_URL = '';  // Relativo ao mesmo host
+    const SESSION_STORAGE_KEY = 'chatbot_session_id';
+    const SESSION_TIMESTAMP_KEY = 'chatbot_session_timestamp';
 
     // --- GESTÃO DE SESSÃO ---
-    function generateSessionId() {
-      return 'sess_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    
+    /**
+     * Obtém ou cria um session_id.
+     * Se não existir no localStorage, solicita ao servidor.
+     */
+    async function getOrCreateSessionId() {
+        let sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+        const timestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY);
+        
+        // Verifica se sessão existe e não está muito antiga (> 23h)
+        if (sessionId && timestamp) {
+            const age = Date.now() - parseInt(timestamp, 10);
+            const hoursOld = age / (1000 * 60 * 60);
+            
+            if (hoursOld > 23) {
+                console.log('[Session] Sessão com mais de 23h, criando nova...');
+                sessionId = null;
+            }
+        }
+        
+        if (!sessionId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/create`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    sessionId = data.session_id;
+                    localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+                    localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+                    console.log('[Session] Nova sessão criada:', sessionId);
+                } else {
+                    // Fallback: gerar ID localmente se servidor falhar
+                    sessionId = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                    localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+                    localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+                    console.warn('[Session] Fallback para sessão local:', sessionId);
+                }
+            } catch (error) {
+                // Fallback em caso de erro de rede
+                sessionId = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+                localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+                console.warn('[Session] Erro de rede, usando sessão local:', sessionId);
+            }
+        }
+        
+        return sessionId;
     }
-    const SESSION_ID = generateSessionId();
 
     /**
-     * Mostra mensagens no log do chat.
-     * Propósito: Formatar e renderizar respostas de utilizador/bot, suportando objetos e listas.
+     * Limpa a sessão atual e cria uma nova.
      */
-    function displayMessage(sender, message) {
-        // CRIA O <p> (Mapeado para .chat-message)
-        const p = document.createElement('p');
+    async function clearSession() {
+        const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
         
-        // Adiciona as classes do NOVO CSS
-        p.classList.add('chat-message');
-        p.classList.add(sender === 'User' ? 'user-message' : 'bot-message');
+        if (sessionId) {
+            try {
+                await fetch(`${API_BASE_URL}/session/${sessionId}`, {
+                    method: 'DELETE'
+                });
+            } catch (error) {
+                console.warn('[Session] Erro ao deletar sessão no servidor:', error);
+            }
+        }
+        
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        localStorage.removeItem(SESSION_TIMESTAMP_KEY);
+        
+        // Limpa o chat visualmente (mantém apenas a mensagem de boas-vindas)
+        const welcomeMessage = chatLog.querySelector('.help-text');
+        chatLog.innerHTML = '';
+        if (welcomeMessage) {
+            chatLog.appendChild(welcomeMessage.cloneNode(true));
+        }
+        
+        // Cria nova sessão
+        await getOrCreateSessionId();
+        
+        displaySystemMessage('Conversa limpa. Nova sessão iniciada.');
+    }
 
-        // Formata a resposta (JSON vs. Texto)
-        let textContent;
-        if (Array.isArray(message)) {
-            // Lista de Filmes
-            if (message.length > 0 && typeof message[0] === 'object' && 'titulo' in message[0]) {
-                textContent = message.map(m => m.titulo).join(', ');
-            // [Nova Lógica] Lista de Géneros (para /genero-do-filme)
-            } else if (message.length > 0 && typeof message[0] === 'object' && 'nome' in message[0]) {
-                const capitalize = (s) => {
-                    if (typeof s !== 'string') return '';
-                    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-                };
-                const generos = message.map(g => capitalize(g.nome));
-                if (generos.length === 1) {
-                    textContent = `Filme de ${generos[0]}`;
-                } else if (generos.length === 2) {
-                    textContent = `Filme de ${generos.join(' e ')}`;
-                } else {
-                    const ultimo = generos.pop();
-                    textContent = `Filme de ${generos.join(', ')}, e ${ultimo}`;
+    // --- INDICADORES DE LOADING ---
+    
+    /**
+     * Mostra indicador de carregamento (typing dots).
+     */
+    function showLoadingIndicator() {
+        const existingLoader = document.getElementById('loading-indicator');
+        if (existingLoader) return;
+        
+        const loader = document.createElement('div');
+        loader.id = 'loading-indicator';
+        loader.className = 'chat-message bot-message loading-indicator';
+        loader.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        loader.setAttribute('aria-label', 'Carregando resposta...');
+        chatLog.appendChild(loader);
+        scrollToBottom();
+    }
+
+    /**
+     * Remove indicador de carregamento.
+     */
+    function hideLoadingIndicator() {
+        const loader = document.getElementById('loading-indicator');
+        if (loader) {
+            loader.remove();
+        }
+    }
+
+    // --- ENVIO DE MENSAGENS ---
+
+    /**
+     * Envia mensagem para o endpoint /chat.
+     * @param {string} text - Texto bruto do utilizador
+     * @returns {Promise<Object>} - Resposta estruturada do backend
+     */
+    async function sendMessage(text) {
+        const sessionId = await getOrCreateSessionId();
+        
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: text,
+                session_id: sessionId
+            })
+        });
+        
+        if (!response.ok) {
+            if (response.status === 429) {
+                throw new Error('Muitas requisições. Aguarde um momento antes de enviar outra mensagem.');
+            }
+            if (response.status === 422) {
+                const errorData = await response.json();
+                throw new Error('Mensagem inválida: ' + (errorData.detail?.[0]?.msg || 'erro de validação'));
+            }
+            throw new Error(`Erro do servidor (${response.status})`);
+        }
+        
+        return await response.json();
+    }
+
+    // --- RENDERIZAÇÃO DE RESPOSTAS ---
+
+    /**
+     * Renderiza resposta do backend baseado no tipo.
+     * @param {Object} response - Resposta estruturada do backend
+     */
+    function renderResponse(response) {
+        const { type, content, suggestions, metadata } = response;
+        
+        switch (type) {
+            case 'list':
+                renderListResponse(content, metadata);
+                break;
+            case 'text':
+                renderTextResponse(content);
+                break;
+            case 'error':
+                renderErrorResponse(content, suggestions);
+                break;
+            case 'help':
+                renderHelpResponse(content);
+                break;
+            case 'clarification':
+                renderClarificationResponse(content, suggestions);
+                break;
+            default:
+                // Fallback para qualquer tipo não reconhecido
+                renderTextResponse(typeof content === 'string' ? content : JSON.stringify(content));
+        }
+        
+        // Renderiza sugestões se existirem
+        if (suggestions && suggestions.length > 0 && type !== 'error' && type !== 'clarification') {
+            renderSuggestions(suggestions);
+        }
+    }
+
+    /**
+     * Renderiza resposta do tipo lista (filmes, géneros, etc.)
+     */
+    function renderListResponse(content, metadata) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message bot-message list-response';
+        
+        // Se for array de objetos com 'titulo'
+        if (Array.isArray(content)) {
+            const items = content.slice(0, 20); // Limita a 20 itens para UI
+            
+            if (items.length > 0 && typeof items[0] === 'object') {
+                // Lista de filmes
+                if ('titulo' in items[0]) {
+                    const titlesList = items.map(item => item.titulo).join(', ');
+                    messageDiv.innerHTML = `
+                        <p class="list-header">Encontrados ${content.length} resultado(s):</p>
+                        <p class="list-content">${escapeHtml(titlesList)}</p>
+                        ${content.length > 20 ? `<p class="list-more">... e mais ${content.length - 20} resultados</p>` : ''}
+                    `;
+                } 
+                // Lista de géneros
+                else if ('nome' in items[0]) {
+                    const genresList = items.map(g => capitalize(g.nome)).join(', ');
+                    messageDiv.innerHTML = `<p>${escapeHtml(genresList)}</p>`;
+                }
+                else {
+                    messageDiv.textContent = JSON.stringify(content);
                 }
             } else {
-                textContent = JSON.stringify(message);
+                // Array de strings
+                messageDiv.innerHTML = `<p>${escapeHtml(items.join(', '))}</p>`;
             }
-        } else if (typeof message === 'object' && message !== null) {
-            if (message.detail) {
-                textContent = `Desculpe: ${message.detail}`; // Erro FastAPI
-            } else if ('nome' in message) {
-                textContent = message.nome; // Género
-            } else if ('genero' in message && 'contagem' in message) {
-                textContent = `Contagem (${message.genero}, ${message.ano}): ${message.contagem}`; // Contagem
+        } else if (typeof content === 'object') {
+            // Objeto único (ex: contagem)
+            if ('genero' in content && 'contagem' in content) {
+                messageDiv.innerHTML = `<p>Contagem: <strong>${content.contagem}</strong> filmes</p>`;
             } else {
-                textContent = JSON.stringify(message);
+                messageDiv.textContent = JSON.stringify(content);
             }
         } else {
-            textContent = String(message); // Texto normal
+            messageDiv.textContent = String(content);
         }
         
-        // Trata o erro 404 que vem como string
-        if (sender === 'Bot' && textContent.includes('{"detail":')) {
-            try {
-                const errJson = JSON.parse(textContent);
-                textContent = `Desculpe: ${errJson.detail}`;
-            } catch(e) { /* ignora */ }
-        }
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+    }
 
-        // Adiciona o texto ao <p>
-        p.textContent = textContent; // (O seu CSS novo não usa <strong>)
-        chatLog.appendChild(p);
+    /**
+     * Renderiza resposta do tipo texto simples.
+     */
+    function renderTextResponse(content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message bot-message text-response';
+        messageDiv.textContent = content;
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    /**
+     * Renderiza resposta de erro.
+     */
+    function renderErrorResponse(content, suggestions) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message bot-message error-response';
+        messageDiv.setAttribute('role', 'alert');
         
-        // Faz o scroll da janela correta
+        let html = `<p class="error-content">⚠️ ${escapeHtml(content)}</p>`;
+        
+        if (suggestions && suggestions.length > 0) {
+            html += '<ul class="error-suggestions">';
+            suggestions.forEach(s => {
+                html += `<li>${escapeHtml(s)}</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        messageDiv.innerHTML = html;
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    /**
+     * Renderiza resposta de ajuda.
+     */
+    function renderHelpResponse(content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message bot-message help-response';
+        
+        if (typeof content === 'object' && content.message && content.examples) {
+            let html = `<p class="help-message">${escapeHtml(content.message)}</p>`;
+            html += '<ul class="help-examples">';
+            content.examples.forEach(ex => {
+                html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
+            });
+            html += '</ul>';
+            messageDiv.innerHTML = html;
+        } else {
+            messageDiv.textContent = typeof content === 'string' ? content : JSON.stringify(content);
+        }
+        
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+        
+        // Adiciona listeners para exemplos clicáveis
+        addClickableListeners(messageDiv);
+    }
+
+    /**
+     * Renderiza resposta de clarificação (baixa confiança).
+     */
+    function renderClarificationResponse(content, suggestions) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message bot-message clarification-response';
+        
+        let html = `<p>${escapeHtml(content)}</p>`;
+        
+        if (suggestions && suggestions.length > 0) {
+            html += '<div class="clarification-suggestions">';
+            suggestions.forEach(s => {
+                html += `<button class="suggestion-btn" data-query="${escapeAttr(s)}">${escapeHtml(s)}</button>`;
+            });
+            html += '</div>';
+        }
+        
+        messageDiv.innerHTML = html;
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+        
+        // Adiciona listeners para sugestões clicáveis
+        addClickableListeners(messageDiv);
+    }
+
+    /**
+     * Renderiza sugestões clicáveis.
+     */
+    function renderSuggestions(suggestions) {
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'suggestions-container';
+        
+        suggestions.forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = 'suggestion-btn';
+            btn.textContent = s;
+            btn.dataset.query = s;
+            suggestionsDiv.appendChild(btn);
+        });
+        
+        chatLog.appendChild(suggestionsDiv);
+        scrollToBottom();
+        
+        addClickableListeners(suggestionsDiv);
+    }
+
+    /**
+     * Adiciona listeners para elementos clicáveis.
+     */
+    function addClickableListeners(container) {
+        container.querySelectorAll('.suggestion-btn, .suggestion-clickable').forEach(el => {
+            el.addEventListener('click', async () => {
+                const query = el.dataset.query;
+                if (query) {
+                    userInput.value = query;
+                    await handleSendMessage();
+                }
+            });
+        });
+    }
+
+    /**
+     * Mostra mensagem do utilizador no chat.
+     */
+    function displayUserMessage(text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message user-message';
+        messageDiv.textContent = text;
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    /**
+     * Mostra mensagem do sistema (informativa).
+     */
+    function displaySystemMessage(text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message system-message';
+        messageDiv.textContent = text;
+        chatLog.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // --- UTILIDADES ---
+
+    function scrollToBottom() {
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    /**
-     * Roteador de intenções que aplica precedência para padrões compostos,
-     * fallback para Fuse.js e devolve a URL do endpoint correspondente.
-     */
-    function routeIntent(message) {
-        const msg = message.trim();
-
-        // 1) Força precedência para padrões compostos quando o regex casa
-        for (const intent of intentPrototypes.slice(0, 2)) { // duas primeiras são compostas
-            const m = msg.match(intent.regex);
-            if (m) return intent.template(m);
-        }
-
-        // 1.1) Precedência para "gênero do FILME" para evitar colisão com "filmes de GENERO"
-        const generoFilmeIntent = intentPrototypes.find(i => i.phrase === "gênero do FILME");
-        if (generoFilmeIntent) {
-            const m2 = msg.match(generoFilmeIntent.regex);
-            if (m2) return generoFilmeIntent.template(m2);
-        }
-
-        // 2) Fallback para fuzzy global com Fuse.js
-        const results = fuse.search(msg);
-        if (!results.length) return null;
-        const bestIntent = results[0].item;
-        const matches = msg.match(bestIntent.regex);
-        if (!matches) return null;
-        return bestIntent.template(matches);
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
+    function escapeAttr(text) {
+        return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+
+    // --- HANDLER PRINCIPAL ---
+
     /**
-     * Envia a mensagem do utilizador ao backend, trata erros e renderiza resposta.
-     * Propósito: Orquestrar chamada fetch e persistir histórico de sessão localmente.
+     * Handler principal para envio de mensagens.
      */
     async function handleSendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
-
-        displayMessage('User', text);
+        
+        // Mostra mensagem do utilizador
+        displayUserMessage(text);
         userInput.value = '';
-
-        let url = routeIntent(text);
-
-        if (!url) {
-            displayMessage('Bot', 'Não entendi. Tente: "filmes do [ATOR]"');
-            return;
-        }
-        // Anexa session_id de forma robusta (suporta URLs já com query)
-        url += (url.includes('?') ? `&session_id=${SESSION_ID}` : `?session_id=${SESSION_ID}`);
-
+        userInput.disabled = true;
+        sendButton.disabled = true;
+        
+        // Mostra indicador de carregamento
+        showLoadingIndicator();
+        
         try {
-            const resp = await fetch(url);
-            if (!resp.ok) {
-                // Lógica de erro limpa (do prompt anterior)
-                let errorMsg = `Erro ${resp.status}.`;
-                const errText = await resp.text();
-                try {
-                    const errJson = JSON.parse(errText);
-                    if (errJson && errJson.detail) {
-                        errorMsg = `Desculpe: ${errJson.detail}`;
-                    } else {
-                        errorMsg = errText;
-                    }
-                } catch (e) {
-                    errorMsg = `Ocorreu um erro no servidor (Erro ${resp.status}).`;
-                }
-                displayMessage('Bot', errorMsg);
-                return;
-            }
-            const data = await resp.json();
-            displayMessage('Bot', data);
-        } catch (e) {
-            displayMessage('Bot', 'Desculpe, ocorreu um erro.');
+            // Envia para o backend
+            const response = await sendMessage(text);
+            
+            // Remove indicador e renderiza resposta
+            hideLoadingIndicator();
+            renderResponse(response);
+            
+        } catch (error) {
+            hideLoadingIndicator();
+            renderErrorResponse(
+                error.message || 'Desculpe, ocorreu um erro ao processar sua mensagem.',
+                ['Tente novamente', 'Digite "ajuda" para ver comandos disponíveis']
+            );
+        } finally {
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            userInput.focus();
         }
     }
 
-    // --- LISTENERS (OS ANTIGOS, SEM <form>) ---
-    // Estes listeners funcionam com o HTML do Prompt 1
+    // --- INICIALIZAÇÃO ---
+
+    // Event listeners
     sendButton.addEventListener('click', handleSendMessage);
+    
     userInput.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-            ev.preventDefault(); // Evita qualquer comportamento padrão de "Enter"
+        if (ev.key === 'Enter' && !ev.shiftKey) {
+            ev.preventDefault();
             handleSendMessage();
         }
     });
+
+    // Botão de limpar conversa (se existir)
+    if (clearButton) {
+        clearButton.addEventListener('click', clearSession);
+    }
+
+    // Inicializa sessão ao carregar
+    getOrCreateSessionId().then(sessionId => {
+        console.log('[Init] Sessão ativa:', sessionId);
+    });
+
+    // Focus no input
+    userInput.focus();
 });

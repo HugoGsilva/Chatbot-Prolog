@@ -1,13 +1,14 @@
 <!--
-  Frontend estático do chatbot.
-  Propósito: Fornecer UI minimalista, formulário de input e exemplo de ajuda inicial.
+  Frontend estático do chatbot (Thin Client).
+  Propósito: Fornecer UI minimalista que envia texto bruto ao backend.
+  Fase 3 - Arquitetura Thin Client: Sem NLU no frontend.
 -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Sakila - Versão Melhorada</title>
+    <title>Chatbot Netflix-Prolog</title>
     
     <link rel="stylesheet" href="/static/style.css">
     
@@ -16,7 +17,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
+    <!-- Fuse.js REMOVIDO - Fase 3 Thin Client -->
 </head>
 <body>
 
@@ -24,7 +25,10 @@
         
         <header class="chatbot-header">
             <h1>Chatbot Netflix-Prolog</h1>
-            <p class="subtitle">Este bot utiliza um NLU Híbrido (Fuzzy + RegEx) e um backend Prolog para consultas no catálogo Netflix. O sistema é tolerante a erros basicos. (ex: comdy para 'Comedy').</p>
+            <p class="subtitle">Assistente inteligente para consultas no catálogo Netflix. Pergunte sobre filmes, atores, diretores ou géneros em linguagem natural.</p>
+            <button type="button" id="clear-button" class="clear-btn" aria-label="Limpar conversa">
+                🗑️ Nova Conversa
+            </button>
         </header>
 
         <main class="chat-window" id="chat-window">
@@ -32,22 +36,25 @@
             <div id="chat-log">
                 
                 <div class="chat-message bot-message help-text">
-                    <p><strong>Principais Capacidades (Exemplos):</strong></p>
+                    <p><strong>O que posso fazer por si?</strong></p>
                     <ul>
                         <li>
-                            <strong>Recomendar:</strong> <code>"filme de ação com ator a"</code>
+                            <strong>Buscar filmes:</strong> <code>"filmes de ação"</code> ou <code>"filmes do ator X"</code>
                         </li>
                         <li>
-                            <strong>Pesquisar (Múltiplos critérios):</strong> <code>"filme de drama e terror"</code>
+                            <strong>Recomendações:</strong> <code>"filme de drama com ator Y"</code>
                         </li>
                         <li>
-                            <strong>Pesquisar (Entidade):</strong> <code>"filmes do diretor X" / "filmes da atriz Y"</code>
+                            <strong>Pesquisar diretores:</strong> <code>"filmes do diretor Z"</code>
                         </li>
                         <li>
-                            <strong>Analisar:</strong> <code>"gênero do filme X" / "contar filmes de ação em  2006"</code>
+                            <strong>Analisar:</strong> <code>"género do filme X"</code>
+                        </li>
+                        <li>
+                            <strong>Ajuda:</strong> <code>"ajuda"</code> para ver todos os comandos
                         </li>
                     </ul>
-                    <p style="margin-top: 15px;">Inicie sua consulta.</p>
+                    <p style="margin-top: 15px;">Escreva sua pergunta em linguagem natural!</p>
                 </div>
             
             </div> </main>

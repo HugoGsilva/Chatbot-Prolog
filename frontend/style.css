@@ -184,3 +184,223 @@ code {
     border-bottom-right-radius: 4px;
     border: 1px solid #70d1ff; /* ADICIONADO: Borda ciano claro para o usuário (a mesma do código) */
 }
+
+/* ========================================
+   FASE 3 - Novos Estilos Thin Client
+   ======================================== */
+
+/* Botão de limpar conversa */
+.clear-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 8px 12px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary-color);
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+    background-color: rgba(255, 100, 100, 0.1);
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+}
+
+.chatbot-header {
+    position: relative;
+}
+
+/* Loading Indicator - Typing dots */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 15px 20px !important;
+}
+
+.loading-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-indicator .dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loading-indicator .dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+/* Resposta de Lista */
+.list-response {
+    background-color: var(--bot-message-color);
+}
+
+.list-response .list-header {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.list-response .list-content {
+    line-height: 1.6;
+}
+
+.list-response .list-more {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}
+
+/* Resposta de Erro */
+.error-response {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    border: 1px solid #dc3545 !important;
+    color: var(--text-color) !important;
+}
+
+.error-response .error-content {
+    color: #ff6b6b;
+    font-weight: 500;
+}
+
+.error-response .error-suggestions {
+    margin-top: 10px;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: var(--text-secondary-color);
+}
+
+.error-response .error-suggestions li {
+    margin-bottom: 4px;
+}
+
+/* Resposta de Ajuda */
+.help-response {
+    background-color: rgba(123, 86, 217, 0.15) !important;
+    border: 1px solid var(--bot-message-color) !important;
+}
+
+.help-response .help-message {
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.help-response .help-examples {
+    list-style: none;
+    padding-left: 0;
+}
+
+.help-response .help-examples li {
+    margin-bottom: 8px;
+}
+
+/* Resposta de Clarificação */
+.clarification-response {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    border: 1px solid #ffc107 !important;
+}
+
+.clarification-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+/* Sugestões Clicáveis */
+.suggestions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    align-self: flex-start;
+}
+
+.suggestion-btn {
+    padding: 8px 14px;
+    background-color: var(--chat-window-color);
+    border: 1px solid var(--bot-message-color);
+    color: var(--bot-message-color);
+    font-size: 0.85rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-btn:hover {
+    background-color: var(--bot-message-color);
+    color: white;
+}
+
+.suggestion-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-clickable:hover {
+    background-color: var(--bot-message-color);
+    color: white;
+}
+
+/* Mensagem do Sistema */
+.system-message {
+    background-color: transparent !important;
+    border: none !important;
+    color: var(--text-secondary-color);
+    font-size: 0.85rem;
+    font-style: italic;
+    text-align: center;
+    align-self: center;
+    padding: 8px !important;
+}
+
+/* Estados de Input */
+#user-input:disabled,
+#send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Acessibilidade - Focus visível */
+.suggestion-btn:focus,
+.suggestion-clickable:focus,
+.clear-btn:focus {
+    outline: 2px solid var(--bot-message-color);
+    outline-offset: 2px;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 600px) {
+    .clear-btn {
+        position: static;
+        margin-top: 10px;
+        width: 100%;
+    }
+    
+    .suggestions-container {
+        flex-direction: column;
+    }
+    
+    .suggestion-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
