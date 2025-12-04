@@ -18,12 +18,58 @@ FILM_CACHE: list[str] = []
 DIRECTOR_CACHE: list[str] = []
 
 GENRE_TRANSLATION_MAP = {
+    # ===== GÊNEROS SIMPLES (mais comuns nas buscas) =====
+    "ACAO": "ACTION & ADVENTURE",
+    "AÇÃO": "ACTION & ADVENTURE",
+    "ACTION": "ACTION & ADVENTURE",
+    "AVENTURA": "ACTION & ADVENTURE",
+    "COMEDIA": "COMEDIES",
+    "COMÉDIA": "COMEDIES",
+    "COMEDY": "COMEDIES",
+    "DRAMA": "DRAMAS",
+    "DRAMAS": "DRAMAS",
+    "TERROR": "HORROR MOVIES",
+    "HORROR": "HORROR MOVIES",
+    "SUSPENSE": "THRILLERS",
+    "THRILLER": "THRILLERS",
+    "ROMANCE": "ROMANTIC MOVIES",
+    "ROMANTICO": "ROMANTIC MOVIES",
+    "ROMÂNTICO": "ROMANTIC MOVIES",
+    "FICÇÃO CIENTÍFICA": "SCI-FI & FANTASY",
+    "FICCAO CIENTIFICA": "SCI-FI & FANTASY",
+    "SCI-FI": "SCI-FI & FANTASY",
+    "SCIFI": "SCI-FI & FANTASY",
+    "FANTASIA": "SCI-FI & FANTASY",
+    "FANTASY": "SCI-FI & FANTASY",
+    "DOCUMENTARIO": "DOCUMENTARIES",
+    "DOCUMENTÁRIO": "DOCUMENTARIES",
+    "DOCUMENTARY": "DOCUMENTARIES",
+    "ANIME": "ANIME FEATURES",
+    "ANIMACAO": "ANIME FEATURES",
+    "ANIMAÇÃO": "ANIME FEATURES",
+    "MUSICAL": "MUSIC & MUSICALS",
+    "CRIME": "CRIME TV SHOWS",
+    "POLICIAL": "CRIME TV SHOWS",
+    "MISTERIO": "TV MYSTERIES",
+    "MISTÉRIO": "TV MYSTERIES",
+    "MYSTERY": "TV MYSTERIES",
+    "INFANTIL": "CHILDREN & FAMILY MOVIES",
+    "KIDS": "KIDS' TV",
+    "CRIANCA": "CHILDREN & FAMILY MOVIES",
+    "CRIANÇA": "CHILDREN & FAMILY MOVIES",
+    "FAMILIA": "CHILDREN & FAMILY MOVIES",
+    "FAMÍLIA": "CHILDREN & FAMILY MOVIES",
+    "FAMILY": "CHILDREN & FAMILY MOVIES",
+    "ESPORTE": "SPORTS MOVIES",
+    "SPORTS": "SPORTS MOVIES",
+    
+    # ===== GÊNEROS COMPOSTOS =====
     # Action & Adventure
     "AÇÃO E AVENTURA (FILMES)": "ACTION & ADVENTURE", # (Compound, para o protótipo)
-    "FILME DE AÇÃO": "ACTION",
-    "FILME DE AVENTURA": "ADVENTURE",
-    "AÇÃO (FILME)": "ACTION",
-    "AVENTURA (FILME)": "ADVENTURE",
+    "FILME DE AÇÃO": "ACTION & ADVENTURE",
+    "FILME DE AVENTURA": "ACTION & ADVENTURE",
+    "AÇÃO (FILME)": "ACTION & ADVENTURE",
+    "AVENTURA (FILME)": "ACTION & ADVENTURE",
     
     # Anime Features
     "FILMES DE ANIME": "ANIME FEATURES",
@@ -347,6 +393,36 @@ def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Option
 
     value, score = result[0], result[1]
     return value if score >= threshold else None
+
+
+def is_valid_genre(query: str, threshold: int = 70) -> bool:
+    """
+    Verifica se a query corresponde a um gênero válido.
+    Usado pelo NLUEngine para decidir entre filmes_por_genero vs filmes_por_ator.
+    
+    Returns:
+        True se a query corresponde a um gênero conhecido
+    """
+    if not query:
+        return False
+    
+    query_upper = query.upper().strip()
+    
+    # Verifica match direto no mapa de tradução
+    if query_upper in GENRE_TRANSLATION_MAP:
+        return True
+    
+    # Verifica match fuzzy no mapa de tradução PT
+    best_pt = find_best_match(query_upper, GENRE_CACHE_PT, threshold=threshold)
+    if best_pt:
+        return True
+    
+    # Verifica match direto no cache de gêneros EN
+    best_en = find_best_match(query_upper, GENRE_CACHE, threshold=threshold)
+    if best_en:
+        return True
+    
+    return False
 
 
 def find_best_actor(query: str) -> Optional[str]:

@@ -40,7 +40,6 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Copia APENAS os ficheiros da nossa aplicação
 COPY app/ ./app/
-COPY backend/ ./backend/
 COPY prolog/ ./prolog/
 COPY frontend/ ./frontend/
 

@@ -44,6 +44,16 @@ class SpellCorrector:
         "aleatorio", "aleatório", "random", "sugerir", "sugestão",
         # Conectores
         "e", "ou", "que", "com", "sem", "mais", "menos",
+        # Gêneros comuns em português (proteger da correção)
+        "acao", "ação", "comedia", "comédia", "drama", "terror", "horror",
+        "suspense", "thriller", "romance", "romantico", "romântico",
+        "ficcao", "ficção", "fantasia", "documentario", "documentário",
+        "animacao", "animação", "anime", "musical", "crime", "policial",
+        "misterio", "mistério", "infantil", "familia", "família",
+        "aventura", "guerra", "western", "faroeste",
+        # Gêneros em inglês
+        "action", "comedy", "horror", "fantasy", "documentary", "animation",
+        "mystery", "family", "adventure", "war",
     }
     
     # Palavras que indicam início de entidade (após estas, vem o nome)

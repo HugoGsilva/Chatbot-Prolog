@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from thefuzz import fuzz
 
 from .schemas import NLUResult
+from .nlu import is_valid_genre, find_best_genre
 
 logger = logging.getLogger(__name__)
 
@@ -219,11 +220,25 @@ class NLUEngine:
         """
         Detecta a intenção principal do texto.
         
+        Usa validação de entidades para desambiguar entre intenções similares:
+        - Se encontrar um gênero válido, prioriza filmes_por_genero
+        - Caso contrário, usa matching de padrões tradicional
+        
         Returns:
             Tuple com (intent_name, confidence_score)
         """
         best_intent = "unknown"
         best_score = 0.0
+        
+        # ===== PRÉ-VALIDAÇÃO: Verificar se há gênero válido no texto =====
+        # Extrai possível entidade após preposição para validar
+        potential_entity = self._extract_entity_candidate(text_lower)
+        has_valid_genre = False
+        
+        if potential_entity:
+            has_valid_genre = is_valid_genre(potential_entity)
+            if has_valid_genre:
+                logger.debug(f"Gênero válido detectado: '{potential_entity}'")
         
         for intent_name, pattern in self.intent_patterns.items():
             score = 0.0
@@ -246,14 +261,50 @@ class NLUEngine:
             if matches > 0:
                 score += 0.2
             
+            # ===== DESAMBIGUAÇÃO: Ajustar scores baseado em validação =====
+            if has_valid_genre:
+                # Se há gênero válido, prioriza filmes_por_genero
+                if intent_name == "filmes_por_genero":
+                    score += 0.5  # Bônus significativo
+                elif intent_name == "filmes_por_ator":
+                    score -= 0.3  # Penaliza intenção de ator
+            
             # Normaliza score
             score = min(score, 1.0)
+            score = max(score, 0.0)
             
             if score > best_score:
                 best_score = score
                 best_intent = intent_name
         
         return best_intent, best_score
+    
+    def _extract_entity_candidate(self, text_lower: str) -> Optional[str]:
+        """
+        Extrai candidato a entidade do texto para validação prévia.
+        Busca texto após preposições comuns.
+        
+        Returns:
+            String candidata a entidade ou None
+        """
+        prepositions = ["de", "do", "da", "por", "com"]
+        
+        for prep in prepositions:
+            pattern = f" {prep} "
+            if pattern in text_lower:
+                idx = text_lower.find(pattern)
+                after_prep = text_lower[idx + len(pattern):].strip()
+                
+                # Remove palavras comuns no final
+                stop_words = [" em ", " e ", " ou ", " que "]
+                for stop in stop_words:
+                    if stop in after_prep:
+                        after_prep = after_prep[:after_prep.find(stop)].strip()
+                
+                if after_prep and len(after_prep) >= 2:
+                    return after_prep
+        
+        return None
     
     def _extract_entities(self, text: str, doc, intent: str) -> Dict[str, str]:
         """

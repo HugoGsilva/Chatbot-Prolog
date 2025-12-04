@@ -23,6 +23,17 @@ from .nlu import find_best_actor, find_best_genre, find_best_film, find_best_dir
 # Importa os Schemas Pydantic (necessários para os novos endpoints TDD)
 from .schemas import Filme, Genero, ContagemGenero
 
+# --- Imports Thin Client (Fase 2) ---
+from .schemas import ChatRequest, ChatResponse
+from .spell_corrector import SpellCorrector
+from .nlu_engine import NLUEngine
+from .intent_router import IntentRouter
+
+# --- Singletons Thin Client ---
+spell_corrector: SpellCorrector = None
+nlu_engine: NLUEngine = None
+intent_router: IntentRouter = None
+
 # --- Helper: fallback para carregar caches NLU do CSV ---
 def load_nlu_caches_from_csv(csv_path: str) -> tuple[int, int, int, int]:
     """
@@ -117,7 +128,30 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Startup] [AVISO] Redis indisponível, prosseguindo sem sessão: {e}")
 
-    print("\n--- SERVIÇO 'app' PRONTO ---")
+    # 4. Inicializar Singletons Thin Client (Fase 2)
+    global spell_corrector, nlu_engine, intent_router
+    
+    print("[Startup] Inicializando componentes Thin Client...")
+    
+    # 4.1 SpellCorrector com vocabulário das caches
+    spell_corrector = SpellCorrector(max_edit_distance=2)
+    vocab_count = spell_corrector.load_vocabulary(
+        actors=ACTOR_CACHE,
+        genres=GENRE_CACHE,
+        films=FILM_CACHE,
+        directors=DIRECTOR_CACHE
+    )
+    print(f"[Startup] SpellCorrector inicializado com {vocab_count} termos no vocabulário.")
+    
+    # 4.2 NLUEngine com SpellCorrector integrado
+    nlu_engine = NLUEngine(spell_corrector=spell_corrector)
+    print("[Startup] NLUEngine inicializado com SpellCorrector integrado.")
+    
+    # 4.3 IntentRouter
+    intent_router = IntentRouter()
+    print("[Startup] IntentRouter inicializado.")
+
+    print("\n--- SERVIÇO 'app' PRONTO (Thin Client Habilitado) ---")
     yield  # A API arranca aqui
 
     # --- LÓGICA DE SHUTDOWN ---
@@ -148,6 +182,67 @@ async def health_check():
     return {"status": "Chatbot API (V2 Netflix) running"}
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# --- ENDPOINT THIN CLIENT (Fase 2) ---
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
+    """
+    Endpoint unificado para chat Thin Client.
+    
+    Processa mensagem do usuário através do pipeline:
+    1. SpellCorrector -> Correção ortográfica
+    2. NLUEngine -> Detecção de intenção e extração de entidades
+    3. IntentRouter -> Roteamento para handler apropriado
+    4. ResponseFormatter -> Formatação padronizada
+    
+    Args:
+        request: ChatRequest com message e session_id
+        
+    Returns:
+        ChatResponse estruturada com type, content, suggestions, metadata
+    """
+    global nlu_engine, intent_router
+    
+    if not nlu_engine or not intent_router:
+        return ChatResponse(
+            type="error",
+            content="Sistema não inicializado. Tente novamente em alguns segundos.",
+            suggestions=None,
+            metadata={"error": "startup_incomplete"}
+        )
+    
+    try:
+        # 1. Processar NLU (já inclui correção ortográfica)
+        nlu_result = nlu_engine.parse(request.message)
+        
+        # 2. Rotear para handler apropriado
+        response = await intent_router.route(nlu_result, request.session_id)
+        
+        # 3. Salvar no histórico da sessão
+        try:
+            await session_service.add_to_history(
+                request.session_id, 
+                f"User: {request.message}"
+            )
+            await session_service.add_to_history(
+                request.session_id,
+                f"Bot: {response.content}"
+            )
+        except Exception as e:
+            print(f"[WARN] Falha ao gravar histórico na sessão '{request.session_id}': {e}")
+        
+        return response
+        
+    except Exception as e:
+        print(f"[ERROR] Erro no endpoint /chat: {e}")
+        return ChatResponse(
+            type="error",
+            content=f"Desculpe, ocorreu um erro ao processar sua mensagem: {str(e)}",
+            suggestions=["Tente reformular sua pergunta", "Digite 'ajuda' para ver comandos disponíveis"],
+            metadata={"error": str(e)}
+        )
+
 
 # --- ENDPOINTS (V2) ---
 # (Todos os endpoints antigos do Sakila foram removidos)
