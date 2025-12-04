@@ -1,29 +1,60 @@
-# 🤖 Chatbot Sakila-Prolog
+# 🤖 Chatbot Netflix-Prolog
 
-Este projeto é um chatbot completo capaz de responder a perguntas sobre a base de dados de filmes Sakila. Utiliza uma arquitetura híbrida que combina a lógica de inferência do **SWI-Prolog** com um backend **FastAPI** (Python), um frontend **JavaScript** e **Redis** para gestão de sessões.
+Este projeto é um chatbot completo capaz de responder a perguntas sobre a base de dados de filmes Netflix. Utiliza uma arquitetura **Thin Client** que combina a lógica de inferência do **SWI-Prolog** com um backend **FastAPI** (Python), um frontend **JavaScript vanilla** e **Redis** para gestão de sessões.
 
-O chatbot implementa NLU (Processamento de Linguagem Natural) em dois níveis:
-- **Nível 1 (Frontend):** Um router de intenção com tolerância a erros de digitação (via `Fuse.js`) para reconhecer intenções mesmo com typos, por exemplo: "flmes por...".
-- **Nível 2 (Backend):** Um resolvedor de entidades (via `thefuzz`/similar) que corrige typos nas entidades e suporta sinónimos, por exemplo: "penlope" → "PENELOPE GUINESS" e "acao" → "Action".
+## 🏗️ Arquitetura Thin Client
+
+O chatbot implementa uma arquitetura moderna de **Thin Client** onde todo o processamento de linguagem natural (NLU) é realizado no servidor:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND                                │
+│   • Apenas UI (HTML/CSS/JS vanilla)                            │
+│   • Envia texto bruto para POST /chat                          │
+│   • Renderiza respostas por tipo (text, list, error, help)     │
+│   • Gerencia sessão localmente via localStorage                 │
+│   • Sem NLU, sem Fuse.js, sem processamento de linguagem       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         BACKEND                                 │
+│   • Toda lógica NLU/intent recognition                         │
+│   • Correção ortográfica (SymSpell, 133k termos)               │
+│   • Fuzzy matching para entidades (thefuzz)                    │
+│   • Processamento Prolog                                       │
+│   • Rate limiting (IP: 20/min, Session: 10/min)                │
+│   • Gerenciamento de sessões (Redis, TTL 24h)                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Vantagens da Arquitetura Thin Client:
+- **Segurança**: Lógica de negócio protegida no servidor
+- **Manutenibilidade**: Atualizações de NLU não requerem deploy de frontend
+- **Performance**: Frontend leve, carregamento rápido
+- **Consistência**: Mesma lógica para todos os clientes
 
 ---
 
-## 🏛️ Arquitetura
+## 🏛️ Serviços Docker
 
 O sistema é orquestrado com `docker-compose` e utiliza 4 serviços principais:
 
-- `mysql`: Servidor MySQL 8.0 que armazena os dados do Sakila.
+- `mysql`: Servidor MySQL 8.0 que armazena os dados do catálogo Netflix.
 - `db-init`: Serviço one-shot que espera o `mysql` ficar saudável e depois executa os scripts `.sql` para criar o schema e popular os dados.
 - `redis`: Broker/cache para armazenar o histórico de conversas (sessões) do chatbot.
 - `app` (Core): Aplicação principal (Python/FastAPI) que:
   - Serve o frontend (`frontend/index.html`, `frontend/style.css`, `frontend/main.js`).
-  - Expõe a API REST (por exemplo, `/filmes-por-ator`, `/filmes-por-genero`, `/genero-do-filme`, `/recomendar-por-ator`).
-  - Persiste o histórico de sessão no `redis`.
+  - Expõe o endpoint unificado `POST /chat` para todas as interações.
+  - Implementa NLU completo: intent detection, entity extraction, spell correction.
+  - Persiste o histórico de sessão no `redis` (TTL 24h).
+  - Aplica rate limiting por IP (20/min) e por sessão (10/min).
   - No startup (via `lifespan`):
     1. Conecta ao Redis e carrega as caches de NLU pré-calculadas.
-    2. Inicia o motor SWI-Prolog (via `pyswip`).
-    3. Carrega as regras (`prolog/rules/inferencia.pl`) e os factos (`prolog/knowledge/imdb_kb.pl`).
-    4. Inicia o servidor Uvicorn na porta 8000.
+    2. Inicializa o SpellCorrector com vocabulário de 133k+ termos.
+    3. Inicia o motor SWI-Prolog (via `pyswip`).
+    4. Carrega as regras (`prolog/rules/inferencia.pl`) e os factos (`prolog/knowledge/imdb_kb.pl`).
+    5. Inicia o servidor Uvicorn na porta 8000.
 
 Notas de logs:
 - Os logs de arranque confirmam caches e ligação ao Redis; o serviço `app` está configurado com `PYTHONUNBUFFERED=1` para evitar buffering e mostrar mensagens em tempo real.
@@ -105,38 +136,167 @@ npx cypress open
 
 ---
 
-## ⚙️ Comandos de Exemplo (NLU Híbrido)
+## 📡 API Endpoints
 
-O bot entende os seguintes padrões (e variações com typos):
+### Endpoint Principal
 
-- `filmes por [ATOR]` (ex.: `flmes por penlope`)
-- `recomendar por [ATOR]` (ex.: `recomendação do penelope`)
-- `filmes de [GENERO]` (ex.: `filmes de acao`, `flmes de actn`)
-- `genero do [FILME]` (ex.: `genero de acdemy dinossaur`)
-- `contar filmes de [GENERO] em [ANO]` (ex.: `contar flmes de comdy em 2006`)
+#### `POST /chat`
+Endpoint unificado para todas as interações do chatbot.
+
+**Request:**
+```json
+{
+  "message": "filmes de ação",
+  "session_id": "uuid-da-sessao"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "list",
+  "content": [
+    {"titulo": "Die Hard", "ano": 1988},
+    {"titulo": "The Matrix", "ano": 1999}
+  ],
+  "suggestions": ["filmes de comédia", "filmes de drama"],
+  "metadata": {
+    "intent": "filmes_por_genero",
+    "confidence": 0.95,
+    "processing_time_ms": 150
+  }
+}
+```
+
+**Tipos de Resposta:**
+- `text`: Mensagem simples de texto
+- `list`: Lista de resultados (filmes, atores, etc.)
+- `error`: Erro com sugestões de correção
+- `help`: Ajuda com exemplos de uso
+- `clarification`: Pedido de clarificação (baixa confiança)
+
+### Endpoints de Sessão
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `POST` | `/session/create` | Cria nova sessão no servidor |
+| `GET` | `/session/{id}/history` | Obtém histórico da sessão |
+| `DELETE` | `/session/{id}` | Encerra sessão |
+
+### Rate Limiting
+
+- **Por IP**: 20 requisições/minuto
+- **Por Sessão**: 10 requisições/minuto
+- Retorna `429 Too Many Requests` quando excedido
 
 ---
 
-## 📂 Estrutura de Pastas (Resumo)
+## ⚙️ Comandos de Exemplo
 
-- `app/` — FastAPI e serviços (NLU, sessão, Prolog service).
-- `frontend/` — `index.html`, `main.js`, `style.css` do chatbot.
-- `prolog/` — Regras (`rules/inferencia.pl`) e conhecimento (`knowledge/imdb_kb.pl`).
-- `data_netflix/` — Pipeline ETL (CSV → MySQL → Prolog → Redis).
-- `cypress/` — Testes E2E.
-- `cypress/` — Testes E2E.
-- `docker-compose.yml` — Orquestração de serviços.
+O bot entende os seguintes padrões em linguagem natural (com tolerância a erros de digitação):
+
+| Intenção | Exemplos |
+|----------|----------|
+| Filmes por gênero | `filmes de ação`, `filmes de comédia`, `movies de drama` |
+| Filmes por ator | `filmes do ator Tom Hanks`, `filmes com Adam Sandler` |
+| Filmes por diretor | `filmes do diretor Steven Spielberg` |
+| Gênero de um filme | `gênero do filme Matrix`, `qual o gênero de Titanic` |
+| Recomendação | `recomende um filme de terror`, `sugira drama` |
+| Ajuda | `ajuda`, `help`, `o que você pode fazer` |
+| Saudação | `olá`, `oi`, `bom dia` |
+
+**Recursos de NLU:**
+- ✅ Correção ortográfica automática (SymSpell)
+- ✅ Fuzzy matching para nomes (thefuzz, 85% similaridade)
+- ✅ Tradução de gêneros PT↔EN
+- ✅ Normalização de capitalização
+- ✅ Detecção de confiança (0.0-1.0)
+
+---
+
+## 📂 Estrutura de Pastas
+
+```
+├── app/                    # Backend FastAPI
+│   ├── main.py            # Endpoints e lifespan
+│   ├── nlu_engine.py      # Motor de NLU
+│   ├── intent_router.py   # Roteador de intenções
+│   ├── response_formatter.py  # Formatador de respostas
+│   ├── spell_corrector.py # Correção ortográfica
+│   ├── rate_limiter.py    # Rate limiting
+│   ├── session_manager.py # Gerenciamento de sessões
+│   ├── prolog_service.py  # Interface com Prolog
+│   └── schemas.py         # Modelos Pydantic
+├── frontend/              # Frontend Thin Client
+│   ├── index.html         # UI do chatbot
+│   ├── main.js           # Cliente JavaScript
+│   └── style.css         # Estilos
+├── prolog/               # Lógica Prolog
+│   ├── rules/inferencia.pl    # Regras de inferência
+│   └── knowledge/imdb_kb.pl   # Base de conhecimento
+├── cypress/              # Testes E2E
+│   └── e2e/
+│       ├── thin_client.cy.js      # Testes do frontend
+│       ├── integration_tests.cy.js # Testes de integração
+│       └── performance_tests.cy.js # Testes de performance
+├── tests/                # Testes Python
+├── data_netflix/         # Pipeline ETL
+├── docker-compose.yml    # Orquestração
+└── Dockerfile           # Build da aplicação
+```
+
+---
+
+## 🧪 Testes
+
+O projeto possui 3 níveis de testes com **57+ testes Cypress** e testes Python.
+
+### Testes E2E (Cypress)
+
+```bash
+# Ambiente deve estar rodando
+docker compose up -d
+
+# Instalar dependências
+npm install
+
+# Executar todos os testes
+npx cypress run
+
+# Modo interativo
+npx cypress open
+```
+
+**Suites de Teste:**
+- `thin_client.cy.js` - 14 testes (arquitetura thin client)
+- `integration_tests.cy.js` - 33 testes (todos os intents, erros, sessões)
+- `performance_tests.cy.js` - 10 testes (tempos de resposta, concorrência)
+
+### Testes Python
+
+```bash
+docker compose run --rm app python -m pytest tests/ -v
+```
 
 ---
 
 ## ✅ Estado
 
-Todas as fases (1–4: implementação; 5: empacotamento) estão concluídas e validadas. Esta documentação finaliza a Etapa 7 da Fase 5.
+| Fase | Descrição | Status |
+|------|-----------|--------|
+| 1 | Backend Foundation | ✅ Completa |
+| 2 | Unified Chat Endpoint | ✅ Completa |
+| 3 | Frontend Migration (Thin Client) | ✅ Completa |
+| 4 | Integration and Testing | ✅ Completa |
+| 5 | Cleanup and Deployment | 🔄 Em progresso |
 
 ---
 
-## 🗒️ Notas
+## 🗒️ Notas Técnicas
 
-- A API FastAPI é servida no mesmo host que o frontend (porta `8000`).
-- O resolvedor de Nível 2 aceita português e inglês para géneros, realizando a tradução automática para o formato esperado pelo Prolog.
-- Logs de arranque mostram Uvicorn e carregamento das caches; caso necessário, utilize `docker compose logs -f app`.
+- **API**: FastAPI servida na porta `8000` (mesmo host que frontend)
+- **Sessões**: TTL de 24 horas, armazenadas no Redis
+- **Rate Limiting**: Sliding window algorithm via Redis sorted sets
+- **NLU**: SymSpell para correção (< 5ms), thefuzz para fuzzy matching (85% threshold)
+- **Prolog**: Timeout de 2s para queries, execução via ThreadPoolExecutor
+- **Gêneros**: Suporte a português e inglês com tradução automática
