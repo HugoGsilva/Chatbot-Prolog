@@ -1,0 +1,66 @@
+DEBUG:asyncio:Using selector: EpollSelector
+--- INICIANDO DEBUG DE GENERO DO FILME ---
+INFO:app.nlu_engine:✅ Modelo spaCy 'pt_core_news_sm' carregado com sucesso
+INFO:app.nlu_engine:✅ 10 padrões de intenção carregados
+
+Input: 'qual o gênero de Matrix'
+DEBUG:app.nlu_engine:Intent 'filmes_por_ator': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_por_genero': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_por_diretor': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'genero_do_filme': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'recomendar_filme': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'contar_filmes': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filme_aleatorio': score=0.00 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_com_filtros': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:NLU Parse: intent=genero_do_filme, confidence=0.88, entities={'filme': 'Matrix'}
+  Intent: genero_do_filme
+  Confidence: 0.88
+  Entities: {'filme': 'Matrix'}
+  -> Fuzzy Film 'Matrix' => 'MATRIX'
+
+Input: 'genero do filme Inception'
+DEBUG:app.nlu_engine:Gênero válido detectado: 'filme inception'
+DEBUG:app.nlu_engine:Intent 'filmes_por_ator': score=0.50 (matches=1)
+DEBUG:app.nlu_engine:Intent 'filmes_por_genero': score=1.20 (matches=1)
+DEBUG:app.nlu_engine:Intent 'filmes_por_diretor': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'genero_do_filme': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'recomendar_filme': score=0.30 (matches=0)
+DEBUG:app.nlu_engine:Intent 'contar_filmes': score=0.50 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filme_aleatorio': score=0.00 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_com_filtros': score=0.90 (matches=1)
+DEBUG:app.nlu_engine:NLU Parse: intent=filmes_por_genero, confidence=1.00, entities={'genero': 'filme Inception'}
+  Intent: filmes_por_genero
+  Confidence: 1.00
+  Entities: {'genero': 'filme Inception'}
+  -> NENHUM FILME EXTRAÍDO!
+
+Input: 'qual a categoria de Titanic'
+DEBUG:app.nlu_engine:Intent 'filmes_por_ator': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_por_genero': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_por_diretor': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'genero_do_filme': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'recomendar_filme': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'contar_filmes': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filme_aleatorio': score=0.00 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_com_filtros': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:NLU Parse: intent=genero_do_filme, confidence=0.88, entities={'filme': 'Titanic'}
+  Intent: genero_do_filme
+  Confidence: 0.88
+  Entities: {'filme': 'Titanic'}
+  -> Fuzzy Film 'Titanic' => 'TITANIC'
+
+Input: 'tipo do filme Avengers'
+DEBUG:app.nlu_engine:Gênero válido detectado: 'filme avengers'
+DEBUG:app.nlu_engine:Intent 'filmes_por_ator': score=0.50 (matches=1)
+DEBUG:app.nlu_engine:Intent 'filmes_por_genero': score=1.20 (matches=1)
+DEBUG:app.nlu_engine:Intent 'filmes_por_diretor': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'genero_do_filme': score=0.80 (matches=1)
+DEBUG:app.nlu_engine:Intent 'recomendar_filme': score=0.30 (matches=0)
+DEBUG:app.nlu_engine:Intent 'contar_filmes': score=0.50 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filme_aleatorio': score=0.00 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_com_filtros': score=0.90 (matches=1)
+DEBUG:app.nlu_engine:NLU Parse: intent=filmes_por_genero, confidence=1.00, entities={'genero': 'filme Avengers'}
+  Intent: filmes_por_genero
+  Confidence: 1.00
+  Entities: {'genero': 'filme Avengers'}
+  -> NENHUM FILME EXTRAÍDO!

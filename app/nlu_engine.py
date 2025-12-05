@@ -105,20 +105,38 @@ class NLUEngine:
         text_to_process = original_text
         
         # 0. VERIFICAÇÃO PRIORITÁRIA ANTES DA CORREÇÃO ORTOGRÁFICA
-        # Palavras-chave de intents simples (ajuda, saudacao) devem ser verificadas
-        # ANTES da correção para evitar que "ajuda" seja corrigido para "juda"
-        priority_intents = ["ajuda", "saudacao"]
+        # Palavras-chave de intents simples devem ser verificadas
+        # ANTES da correção para evitar correções indesejadas
         original_lower = original_text.lower().strip()
-        for intent_name in priority_intents:
+        
+        # 0.1 Intents com match exato (ajuda, saudacao)
+        exact_match_intents = ["ajuda", "saudacao"]
+        for intent_name in exact_match_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]
                 for keyword in pattern["keywords"]:
                     if original_lower == keyword or original_lower.startswith(keyword + " ") or original_lower.endswith(" " + keyword):
-                        logger.debug(f"Intent prioritário detectado antes da correção: '{intent_name}' via keyword '{keyword}'")
+                        logger.debug(f"Intent prioritário (exact) detectado: '{intent_name}' via keyword '{keyword}'")
                         return NLUResult(
                             intent=intent_name,
                             entities={},
                             confidence=0.95,
+                            original_text=original_text,
+                            corrected_text=None
+                        )
+        
+        # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme)
+        keyword_match_intents = ["filme_aleatorio", "recomendar_filme"]
+        for intent_name in keyword_match_intents:
+            if intent_name in self.intent_patterns:
+                pattern = self.intent_patterns[intent_name]
+                for keyword in pattern["keywords"]:
+                    if keyword in original_lower:
+                        logger.debug(f"Intent prioritário (keyword) detectado: '{intent_name}' via keyword '{keyword}'")
+                        return NLUResult(
+                            intent=intent_name,
+                            entities={},
+                            confidence=0.90,
                             original_text=original_text,
                             corrected_text=None
                         )
@@ -289,7 +307,7 @@ class NLUEngine:
                     
                     # [FIX] Boost para keywords fortes (verbos/interrogativos) para desambiguação
                     # Isso garante que "quantos filmes..." vença "filmes..."
-                    if keyword in ["quantos", "contar", "recomendar", "sugira", "ajuda", "quem", "qual"]:
+                    if keyword in ["quantos", "contar", "recomendar", "sugira", "ajuda", "quem", "qual", "gênero", "genero", "tipo", "categoria"]:
                         score += 0.3
             
             # Verifica presença de preposições (se houver)

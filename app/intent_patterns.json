@@ -167,13 +167,16 @@
             "aleatorio",
             "random",
             "sortear",
-            "qualquer"
+            "qualquer",
+            "surpreenda",
+            "surpresa"
         ],
         "prepositions": [],
         "entity_type": "NONE",
         "examples": [
             "filme aleatório",
-            "me mostre qualquer filme"
+            "me mostre qualquer filme",
+            "me surpreenda"
         ]
     },
     "filmes_com_filtros": {
