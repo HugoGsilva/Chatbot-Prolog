@@ -1,0 +1,20 @@
+DEBUG:asyncio:Using selector: EpollSelector
+--- INICIANDO TESTE DE CASOS NLU ---
+INFO:app.nlu_engine:✅ Modelo spaCy 'pt_core_news_sm' carregado com sucesso
+INFO:app.nlu_engine:✅ 10 padrões de intenção carregados
+
+Input: 'quantos filmes de ação em 2020'
+DEBUG:app.nlu_engine:Gênero válido detectado: 'ação'
+DEBUG:app.nlu_engine:Intent 'filmes_por_ator': score=0.90 (matches=2)
+DEBUG:app.nlu_engine:Intent 'filmes_por_genero': score=1.60 (matches=2)
+DEBUG:app.nlu_engine:Intent 'filmes_por_diretor': score=1.20 (matches=2)
+DEBUG:app.nlu_engine:Intent 'genero_do_filme': score=0.20 (matches=0)
+DEBUG:app.nlu_engine:Intent 'recomendar_filme': score=0.50 (matches=0)
+DEBUG:app.nlu_engine:Intent 'contar_filmes': score=1.40 (matches=1)
+DEBUG:app.nlu_engine:Intent 'filme_aleatorio': score=0.00 (matches=0)
+DEBUG:app.nlu_engine:Intent 'filmes_com_filtros': score=1.50 (matches=2)
+DEBUG:app.nlu_engine:NLU Parse: intent=filmes_por_genero, confidence=1.00, entities={'genero': 'ação'}
+  Intent: filmes_por_genero
+  Confidence: 1.00
+  Entities: {'genero': 'ação'}
+  -> Fuzzy Genre 'ação' => 'ACTION & ADVENTURE'

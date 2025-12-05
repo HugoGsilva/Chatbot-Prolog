@@ -38,6 +38,8 @@ class IntentRouter:
     def __init__(self):
         """Inicializa o router com mapeamento de handlers."""
         self._handlers: Dict[str, Callable] = {
+            "ajuda": self.handle_ajuda,
+            "saudacao": self.handle_saudacao,
             "filmes_por_ator": self.handle_filmes_por_ator,
             "filmes_por_genero": self.handle_filmes_por_genero,
             "filmes_por_diretor": self.handle_filmes_por_diretor,
@@ -134,6 +136,58 @@ class IntentRouter:
     
     # =========================================================================
     # HANDLERS DE INTENÇÃO
+    # =========================================================================
+    
+    # =========================================================================
+    # HANDLERS DE AJUDA E SAUDAÇÃO
+    # =========================================================================
+    
+    async def handle_ajuda(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """
+        Handler para intenção 'ajuda'.
+        
+        Retorna informações sobre como usar o chatbot.
+        """
+        help_content = {
+            "message": "👋 Olá! Sou o chatbot de filmes Netflix. Posso ajudar você a:",
+            "examples": {
+                "Buscar por ator": ["filmes do Tom Hanks", "filmes com Adam Sandler"],
+                "Buscar por gênero": ["filmes de ação", "filmes de comédia"],
+                "Buscar por diretor": ["filmes do Steven Spielberg", "filmes de Christopher Nolan"],
+                "Descobrir gênero": ["gênero de Inception", "qual o tipo de Matrix"],
+                "Recomendações": ["recomende um filme de terror", "sugira um drama"],
+                "Filme aleatório": ["filme aleatório", "me surpreenda"]
+            }
+        }
+        
+        return ChatResponse(
+            type=ResponseType.HELP,
+            content=help_content,
+            suggestions=["filmes de ação", "filmes do Tom Hanks", "filme aleatório"],
+        )
+    
+    async def handle_saudacao(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """
+        Handler para intenção 'saudacao'.
+        
+        Responde a saudações do usuário.
+        """
+        return ChatResponse(
+            type=ResponseType.TEXT,
+            content="Olá! 👋 Sou o chatbot de filmes Netflix. Como posso ajudar? Digite 'ajuda' para ver o que posso fazer.",
+            suggestions=["ajuda", "filmes de ação", "filme aleatório"],
+        )
+    
+    # =========================================================================
+    # HANDLERS DE FILMES
     # =========================================================================
     
     async def handle_filmes_por_ator(

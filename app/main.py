@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # Nossas importações de serviço
 from .prolog_service import prolog_service
@@ -169,6 +170,14 @@ app = FastAPI(
     description="API para consultar a base Netflix usando lógica Prolog.",
     version="2.0.0",
     lifespan=lifespan,  # (O novo startup leve)
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- SERVIR O FRONTEND (Inalterado) ---

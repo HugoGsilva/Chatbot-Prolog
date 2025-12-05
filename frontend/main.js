@@ -286,16 +286,37 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renderiza resposta de ajuda.
      */
     function renderHelpResponse(content) {
+        console.log('[DEBUG] renderHelpResponse content:', content);
         const messageDiv = document.createElement('div');
         messageDiv.className = 'chat-message bot-message help-response';
         
         if (typeof content === 'object' && content.message && content.examples) {
             let html = `<p class="help-message">${escapeHtml(content.message)}</p>`;
-            html += '<ul class="help-examples">';
-            content.examples.forEach(ex => {
-                html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
-            });
-            html += '</ul>';
+            html += '<div class="help-examples">';
+            
+            // Suporta tanto array quanto objeto de exemplos
+            if (Array.isArray(content.examples)) {
+                html += '<ul>';
+                content.examples.forEach(ex => {
+                    html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
+                });
+                html += '</ul>';
+            } else if (typeof content.examples === 'object') {
+                // Objeto com categorias -> arrays de exemplos
+                for (const [category, examples] of Object.entries(content.examples)) {
+                    html += `<div class="help-category">`;
+                    html += `<strong>${escapeHtml(category)}:</strong>`;
+                    html += '<ul>';
+                    if (Array.isArray(examples)) {
+                        examples.forEach(ex => {
+                            html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
+                        });
+                    }
+                    html += '</ul></div>';
+                }
+            }
+            
+            html += '</div>';
             messageDiv.innerHTML = html;
         } else {
             messageDiv.textContent = typeof content === 'string' ? content : JSON.stringify(content);
@@ -439,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderResponse(response);
             
         } catch (error) {
+            console.error('[DEBUG] handleSendMessage error:', error);
             hideLoadingIndicator();
             renderErrorResponse(
                 error.message || 'Desculpe, ocorreu um erro ao processar sua mensagem.',

@@ -1,4 +1,51 @@
 {
+    "ajuda": {
+        "keywords": [
+            "ajuda",
+            "ajude",
+            "help",
+            "socorro",
+            "como",
+            "usar",
+            "funciona",
+            "comandos",
+            "exemplos",
+            "o que você pode",
+            "o que posso"
+        ],
+        "prepositions": [],
+        "entity_type": "NONE",
+        "examples": [
+            "ajuda",
+            "help",
+            "como funciona",
+            "o que você pode fazer",
+            "me ajude"
+        ]
+    },
+    "saudacao": {
+        "keywords": [
+            "oi",
+            "olá",
+            "ola",
+            "bom dia",
+            "boa tarde",
+            "boa noite",
+            "hello",
+            "hi",
+            "eai",
+            "e aí",
+            "tudo bem"
+        ],
+        "prepositions": [],
+        "entity_type": "NONE",
+        "examples": [
+            "oi",
+            "olá",
+            "bom dia",
+            "boa tarde"
+        ]
+    },
     "filmes_por_ator": {
         "keywords": [
             "filmes",

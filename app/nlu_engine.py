@@ -13,6 +13,7 @@ Atualizado para arquitetura Thin Client:
 import spacy
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from thefuzz import fuzz
@@ -102,6 +103,25 @@ class NLUEngine:
         original_text = text.strip()
         corrected_text = None
         text_to_process = original_text
+        
+        # 0. VERIFICAÇÃO PRIORITÁRIA ANTES DA CORREÇÃO ORTOGRÁFICA
+        # Palavras-chave de intents simples (ajuda, saudacao) devem ser verificadas
+        # ANTES da correção para evitar que "ajuda" seja corrigido para "juda"
+        priority_intents = ["ajuda", "saudacao"]
+        original_lower = original_text.lower().strip()
+        for intent_name in priority_intents:
+            if intent_name in self.intent_patterns:
+                pattern = self.intent_patterns[intent_name]
+                for keyword in pattern["keywords"]:
+                    if original_lower == keyword or original_lower.startswith(keyword + " ") or original_lower.endswith(" " + keyword):
+                        logger.debug(f"Intent prioritário detectado antes da correção: '{intent_name}' via keyword '{keyword}'")
+                        return NLUResult(
+                            intent=intent_name,
+                            entities={},
+                            confidence=0.95,
+                            original_text=original_text,
+                            corrected_text=None
+                        )
         
         # 1. Aplicar correção ortográfica (se disponível)
         if apply_spell_correction and self._spell_corrector and self._spell_corrector.is_initialized:
@@ -230,6 +250,18 @@ class NLUEngine:
         best_intent = "unknown"
         best_score = 0.0
         
+        # ===== VERIFICAÇÃO PRIORITÁRIA: Intents simples (ajuda, saudacao) =====
+        # Estas intents têm precedência quando há match exato das keywords
+        priority_intents = ["ajuda", "saudacao"]
+        for intent_name in priority_intents:
+            if intent_name in self.intent_patterns:
+                pattern = self.intent_patterns[intent_name]
+                for keyword in pattern["keywords"]:
+                    # Match exato ou texto começa com a keyword
+                    if text_lower == keyword or text_lower.startswith(keyword + " ") or text_lower.endswith(" " + keyword):
+                        logger.debug(f"Intent prioritário detectado: '{intent_name}' via keyword '{keyword}'")
+                        return intent_name, 1.0
+        
         # ===== PRÉ-VALIDAÇÃO: Verificar se há gênero válido no texto =====
         # Extrai possível entidade após preposição para validar
         potential_entity = self._extract_entity_candidate(text_lower)
@@ -241,14 +273,24 @@ class NLUEngine:
                 logger.debug(f"Gênero válido detectado: '{potential_entity}'")
         
         for intent_name, pattern in self.intent_patterns.items():
+            # Skip priority intents já verificados
+            if intent_name in priority_intents:
+                continue
+                
             score = 0.0
             matches = 0
             
             # Verifica presença de keywords
             for keyword in pattern["keywords"]:
-                if keyword in text_lower:
+                # [FIX] Usa regex boundary para evitar substring matching parcial e duplicado
+                if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
                     matches += 1
                     score += 0.4
+                    
+                    # [FIX] Boost para keywords fortes (verbos/interrogativos) para desambiguação
+                    # Isso garante que "quantos filmes..." vença "filmes..."
+                    if keyword in ["quantos", "contar", "recomendar", "sugira", "ajuda", "quem", "qual"]:
+                        score += 0.3
             
             # Verifica presença de preposições (se houver)
             if pattern["prepositions"]:
@@ -262,16 +304,24 @@ class NLUEngine:
                 score += 0.2
             
             # ===== DESAMBIGUAÇÃO: Ajustar scores baseado em validação =====
+            # ===== DESAMBIGUAÇÃO: Ajustar scores baseado em validação =====
             if has_valid_genre:
-                # Se há gênero válido, prioriza filmes_por_genero
+                # Se há gênero válido, prioriza intenções que usam GENRE ou MIXED
+                entity_type = pattern.get("entity_type", "NONE")
+                if entity_type in ["GENRE", "MIXED", "MULTI_GENRE", "GENRE_YEAR"]:
+                    score += 0.3  # Bônus moderado para intents compatíveis
+                
+                # Se a intenção for especificamente filmes_por_genero E não houver keywords de outras ações
                 if intent_name == "filmes_por_genero":
-                    score += 0.5  # Bônus significativo
+                    # Só dá boost extra se não tiver keywords de contagem/recomendação explícita noutros lugares
+                    score += 0.1
                 elif intent_name == "filmes_por_ator":
-                    score -= 0.3  # Penaliza intenção de ator
+                    score -= 0.3  # Penaliza intenção de ator se só achou gênero
             
-            # Normaliza score
-            score = min(score, 1.0)
+            # Normaliza score (apenas limite inferior)
             score = max(score, 0.0)
+            
+            logger.debug(f"Intent '{intent_name}': score={score:.2f} (matches={matches})")
             
             if score > best_score:
                 best_score = score
@@ -355,6 +405,11 @@ class NLUEngine:
             # Tenta extrair gênero
             genero_entities = self._extract_after_preposition(text.lower(), ["de"], "genero")
             entities.update(genero_entities)
+            
+            # [FIX] Tenta extrair ano para intents como contar_filmes
+            year_match = re.search(r'\b(19|20)\d{2}\b', text)
+            if year_match:
+                entities["ano"] = year_match.group()
         
         # Para MULTI_GENRE: extrai dois gêneros
         elif entity_type == "MULTI_GENRE":
