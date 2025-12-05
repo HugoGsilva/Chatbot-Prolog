@@ -14,6 +14,7 @@ import spacy
 import json
 import logging
 import re
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from thefuzz import fuzz
@@ -22,6 +23,12 @@ from .schemas import NLUResult
 from .nlu import is_valid_genre, find_best_genre
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_text(text: str) -> str:
+    """Remove acentos e normaliza texto para comparação."""
+    nfkd = unicodedata.normalize('NFKD', text)
+    return ''.join(c for c in nfkd if not unicodedata.combining(c)).lower()
 
 
 class NLUEngine:
@@ -108,14 +115,37 @@ class NLUEngine:
         # Palavras-chave de intents simples devem ser verificadas
         # ANTES da correção para evitar correções indesejadas
         original_lower = original_text.lower().strip()
+        original_normalized = normalize_text(original_text)  # Sem acentos
         
-        # 0.1 Intents com match exato (ajuda, saudacao)
-        exact_match_intents = ["ajuda", "saudacao"]
+        # 0.0 VERIFICAR SE É BUSCA POR ANO (números não devem ser corrigidos para nomes)
+        year_match = re.search(r'\b(19\d{2}|20[0-3]\d)\b', original_lower)
+        if year_match and ('filme' in original_lower or 'lançad' in original_lower or 'ano' in original_lower):
+            ano = year_match.group(1)
+            logger.debug(f"Intent de ano detectado: filmes_por_ano, ano={ano}")
+            return NLUResult(
+                intent="filmes_por_ano",
+                entities={"ano": ano},
+                confidence=0.95,
+                original_text=original_text,
+                corrected_text=None
+            )
+        
+        # 0.1 Intents com match exato (ajuda, saudacao, identidade, despedida)
+        exact_match_intents = ["ajuda", "saudacao", "identidade", "despedida"]
         for intent_name in exact_match_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]
                 for keyword in pattern["keywords"]:
-                    if original_lower == keyword or original_lower.startswith(keyword + " ") or original_lower.endswith(" " + keyword):
+                    keyword_normalized = normalize_text(keyword)
+                    # Match com e sem acentos
+                    if (original_lower == keyword or 
+                        original_normalized == keyword_normalized or
+                        original_lower.startswith(keyword + " ") or 
+                        original_normalized.startswith(keyword_normalized + " ") or
+                        original_lower.endswith(" " + keyword) or 
+                        original_normalized.endswith(" " + keyword_normalized) or
+                        keyword in original_lower or
+                        keyword_normalized in original_normalized):
                         logger.debug(f"Intent prioritário (exact) detectado: '{intent_name}' via keyword '{keyword}'")
                         return NLUResult(
                             intent=intent_name,
@@ -125,17 +155,56 @@ class NLUEngine:
                             corrected_text=None
                         )
         
-        # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme)
-        keyword_match_intents = ["filme_aleatorio", "recomendar_filme"]
+        # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme, small_talk)
+        keyword_match_intents = ["filme_aleatorio", "recomendar_filme", "small_talk", "diretor_do_filme"]
         for intent_name in keyword_match_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]
                 for keyword in pattern["keywords"]:
-                    if keyword in original_lower:
-                        logger.debug(f"Intent prioritário (keyword) detectado: '{intent_name}' via keyword '{keyword}'")
+                    keyword_normalized = normalize_text(keyword)
+                    if keyword in original_lower or keyword_normalized in original_normalized:
+                        entities = {}
+                        
+                        # Para diretor_do_filme, extrair entidade filme
+                        if intent_name == "diretor_do_filme":
+                            # Primeiro tenta com preposições
+                            found = False
+                            for prep in ["de ", "do ", "da "]:
+                                if prep in original_lower:
+                                    idx = original_lower.rfind(prep)
+                                    filme_candidate = original_text[idx + len(prep):].strip().rstrip("?")
+                                    if filme_candidate:
+                                        entities["filme"] = filme_candidate
+                                        found = True
+                                    break
+                            
+                            # Se não encontrou, tenta extrair após "dirigiu" ou similar
+                            if not found:
+                                for verb in ["dirigiu ", "fez ", "criou "]:
+                                    if verb in original_lower:
+                                        idx = original_lower.find(verb)
+                                        filme_candidate = original_text[idx + len(verb):].strip().rstrip("?")
+                                        if filme_candidate:
+                                            entities["filme"] = filme_candidate
+                                        break
+                        
+                        # Para recomendar_filme, extrair gênero se presente
+                        if intent_name == "recomendar_filme":
+                            for prep in ["de ", "do ", "da "]:
+                                if prep in original_lower:
+                                    idx = original_lower.find(prep)
+                                    genero_candidate = original_lower[idx + len(prep):].strip().rstrip("?")
+                                    # Remove palavras comuns
+                                    for word in ["um ", "uma ", "filme ", "filmes "]:
+                                        genero_candidate = genero_candidate.replace(word, "").strip()
+                                    if genero_candidate and genero_candidate not in ["um", "uma", "filme", "filmes"]:
+                                        entities["genero"] = genero_candidate
+                                    break
+                        
+                        logger.debug(f"Intent prioritário (keyword) detectado: '{intent_name}' via keyword '{keyword}', entities={entities}")
                         return NLUResult(
                             intent=intent_name,
-                            entities={},
+                            entities=entities,
                             confidence=0.90,
                             original_text=original_text,
                             corrected_text=None
@@ -420,9 +489,25 @@ class NLUEngine:
             ator_entities = self._extract_after_preposition(text, ["por", "com", "do"], "ator")
             entities.update(ator_entities)
             
-            # Tenta extrair gênero
-            genero_entities = self._extract_after_preposition(text.lower(), ["de"], "genero")
-            entities.update(genero_entities)
+            # Tenta extrair gênero (busca mais agressiva)
+            text_lower = text.lower()
+            genero_entities = self._extract_after_preposition(text_lower, ["de", "do", "da"], "genero")
+            
+            # [FIX] Validar se o gênero extraído é realmente um gênero válido
+            if "genero" in genero_entities:
+                potential_genre = genero_entities["genero"]
+                # Remove palavras comuns que não são gêneros
+                if potential_genre not in ["um", "uma", "filme", "filmes", "algum"]:
+                    from .nlu import is_valid_genre
+                    if is_valid_genre(potential_genre):
+                        entities.update(genero_entities)
+                    else:
+                        # Tenta buscar gênero em qualquer parte do texto
+                        from .nlu import GENRE_CACHE
+                        for genre in GENRE_CACHE:
+                            if genre.lower() in text_lower:
+                                entities["genero"] = genre
+                                break
             
             # [FIX] Tenta extrair ano para intents como contar_filmes
             year_match = re.search(r'\b(19|20)\d{2}\b', text)

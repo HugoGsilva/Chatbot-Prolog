@@ -40,10 +40,15 @@ class IntentRouter:
         self._handlers: Dict[str, Callable] = {
             "ajuda": self.handle_ajuda,
             "saudacao": self.handle_saudacao,
+            "identidade": self.handle_identidade,
+            "despedida": self.handle_despedida,
+            "small_talk": self.handle_small_talk,
             "filmes_por_ator": self.handle_filmes_por_ator,
             "filmes_por_genero": self.handle_filmes_por_genero,
             "filmes_por_diretor": self.handle_filmes_por_diretor,
+            "filmes_por_ano": self.handle_filmes_por_ano,
             "genero_do_filme": self.handle_genero_do_filme,
+            "diretor_do_filme": self.handle_diretor_do_filme,
             "filme_aleatorio": self.handle_filme_aleatorio,
             "recomendar_ator_e_genero": self.handle_recomendar_ator_e_genero,
             "recomendar_dois_generos": self.handle_recomendar_dois_generos,
@@ -184,6 +189,57 @@ class IntentRouter:
             type=ResponseType.TEXT,
             content="Olá! 👋 Sou o chatbot de filmes Netflix. Como posso ajudar? Digite 'ajuda' para ver o que posso fazer.",
             suggestions=["ajuda", "filmes de ação", "filme aleatório"],
+        )
+    
+    async def handle_identidade(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """
+        Handler para intenção 'identidade'.
+        
+        Responde a perguntas sobre quem é o bot.
+        """
+        return ChatResponse(
+            type=ResponseType.TEXT,
+            content="🤖 Olá! Eu sou o **Chatbot Netflix**, um assistente virtual especializado em filmes. "
+                    "Fui criado para ajudar você a descobrir filmes por ator, gênero, diretor, "
+                    "obter recomendações e muito mais! Digite 'ajuda' para ver tudo que posso fazer.",
+            suggestions=["ajuda", "filme aleatório", "filmes de ação"],
+        )
+    
+    async def handle_despedida(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """
+        Handler para intenção 'despedida'.
+        
+        Responde a despedidas do usuário.
+        """
+        return ChatResponse(
+            type=ResponseType.TEXT,
+            content="👋 Até logo! Foi um prazer ajudar. Volte sempre que precisar de recomendações de filmes!",
+            suggestions=[],
+        )
+    
+    async def handle_small_talk(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """
+        Handler para intenção 'small_talk'.
+        
+        Responde a perguntas genéricas fora do escopo.
+        """
+        return ChatResponse(
+            type=ResponseType.TEXT,
+            content="🤔 Essa é uma pergunta interessante, mas sou especializado em filmes! "
+                    "Posso te ajudar a encontrar um bom filme para assistir?",
+            suggestions=["ajuda", "filme aleatório", "filmes de drama"],
         )
     
     # =========================================================================
@@ -380,6 +436,103 @@ class IntentRouter:
             content=generos,
         )
     
+    async def handle_diretor_do_filme(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """Handler para intenção 'diretor_do_filme' - quem dirigiu X?"""
+        filme = entities.get("filme", "")
+        
+        if not filme:
+            return ChatResponse(
+                type=ResponseType.ERROR,
+                content="Não consegui identificar o nome do filme. Pode reformular?",
+                suggestions=["quem dirigiu Matrix?", "diretor de Inception"],
+            )
+        
+        # Normaliza o título do filme
+        best_match = find_best_film(filme)
+        
+        if not best_match:
+            return ChatResponse(
+                type=ResponseType.ERROR,
+                content=f"Não encontrei o filme '{filme}' na base de dados.",
+                suggestions=["quem dirigiu Matrix?", "diretor de Titanic"],
+            )
+        
+        # Consulta Prolog para buscar diretor
+        try:
+            query_string = (
+                f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
+                f"Upper = '{best_match}', imdb_kb:netflix_director(ID, Diretor)"
+            )
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
+        
+        if not results:
+            return ChatResponse(
+                type=ResponseType.TEXT,
+                content=f"Não encontrei informações de diretor para o filme '{best_match}'.",
+            )
+        
+        diretores = list(set([r["Diretor"] for r in results]))
+        
+        if len(diretores) == 1:
+            return ChatResponse(
+                type=ResponseType.TEXT,
+                content=f"🎬 O filme **{best_match}** foi dirigido por **{diretores[0]}**.",
+                suggestions=[f"filmes do diretor {diretores[0]}", "filme aleatório"],
+            )
+        else:
+            diretores_str = ", ".join(diretores)
+            return ChatResponse(
+                type=ResponseType.TEXT,
+                content=f"🎬 O filme **{best_match}** foi dirigido por: **{diretores_str}**.",
+                suggestions=["filme aleatório"],
+            )
+    
+    async def handle_filmes_por_ano(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """Handler para intenção 'filmes_por_ano' - filmes de 2020."""
+        ano = entities.get("ano", "") or entities.get("year", "")
+        
+        if not ano:
+            return ChatResponse(
+                type=ResponseType.ERROR,
+                content="Não consegui identificar o ano. Pode reformular?",
+                suggestions=["filmes de 2020", "filmes de 2019"],
+            )
+        
+        # Consulta Prolog para buscar filmes do ano
+        try:
+            query_string = f"imdb_kb:netflix_title(_, TituloFilme, {ano})"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
+        
+        if not results:
+            return ChatResponse(
+                type=ResponseType.TEXT,
+                content=f"Não encontrei filmes do ano {ano}.",
+                suggestions=["filmes de 2020", "filme aleatório"],
+            )
+        
+        # Limita a 20 resultados
+        filmes = [{"titulo": r["TituloFilme"]} for r in results[:20]]
+        total = len(results)
+        
+        return ChatResponse(
+            type=ResponseType.LIST,
+            content=filmes,
+            suggestions=[f"filmes de {int(ano)-1}", f"filmes de {int(ano)+1}"] if ano.isdigit() else [],
+            metadata={"total_encontrados": total, "exibindo": len(filmes)}
+        )
+    
     async def handle_filme_aleatorio(
         self, 
         entities: Dict[str, str], 
@@ -574,6 +727,27 @@ class IntentRouter:
         elif "genero1" in entities and "genero2" in entities:
             return await self.handle_recomendar_dois_generos(entities, session_id)
         elif "genero" in entities:
+            # [FIX] Recomendação por gênero - usa filme aleatório do gênero
+            genero = entities.get("genero", "")
+            best_genre = find_best_genre(genero)
+            
+            if best_genre:
+                try:
+                    genre_query = best_genre.upper()
+                    query_string = f"imdb_rules:random_movie_by_genre('{genre_query}', TituloFilme)"
+                    results = await self._query_prolog(query_string)
+                    
+                    if results:
+                        titulo = results[0]["TituloFilme"]
+                        return ChatResponse(
+                            type=ResponseType.TEXT,
+                            content=f"🎬 Para {best_genre}, recomendo: **{titulo}**!",
+                            suggestions=[f"gênero de {titulo}", f"outro filme de {best_genre}", "filme aleatório"],
+                        )
+                except PrologTimeoutError:
+                    return self._create_timeout_response()
+            
+            # Fallback: lista filmes do gênero
             return await self.handle_filmes_por_genero(entities, session_id)
         else:
             # Filme aleatório como fallback

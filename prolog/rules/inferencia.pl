@@ -14,7 +14,12 @@
     recomendar_por_dois_generos/3,
 
     % Nova funcionalidade: recomendação aleatória
-    random_movie/1
+    random_movie/1,
+    random_movie_by_genre/2,
+    
+    % Novas funcionalidades
+    diretor_de_filme/2,
+    filmes_por_ano/2
 
     % (As regras 'get_all_...' já não são necessárias aqui,
     % pois o pipeline ETL (Fase 1) trata disso)
@@ -97,3 +102,31 @@ random_movie(TituloFilme) :-
     ListaDeFilmes \= [],
     % 2. Escolhe um membro aleatório da lista
     random_member(TituloFilme, ListaDeFilmes).
+
+% random_movie_by_genre(+NomeGenero, -TituloFilme)
+% Encontra um filme aleatório de um gênero específico.
+random_movie_by_genre(NomeGenero, TituloFilme) :-
+    findall(
+        Titulo,
+        (
+            imdb_kb:netflix_genre(ShowID, NomeGenero),
+            imdb_kb:netflix_title(ShowID, Titulo, _)
+        ),
+        ListaDeFilmes
+    ),
+    ListaDeFilmes \= [],
+    random_member(TituloFilme, ListaDeFilmes).
+
+% diretor_de_filme(+TituloFilme, -Diretor)
+% Retorna o diretor de um filme específico.
+diretor_de_filme(TituloFilmeRaw, Diretor) :-
+    upcase_atom(TituloFilmeRaw, UpperParam),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    upcase_atom(TituloOriginal, UpperFact),
+    UpperParam = UpperFact,
+    imdb_kb:netflix_director(ShowID, Diretor).
+
+% filmes_por_ano(+Ano, -TituloFilme)
+% Retorna filmes lançados em um ano específico.
+filmes_por_ano(Ano, TituloFilme) :-
+    imdb_kb:netflix_title(_, TituloFilme, Ano).
