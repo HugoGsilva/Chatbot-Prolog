@@ -378,21 +378,151 @@ def normalize_film_title(title: str) -> str:
 # ---------------------------------------------------------------------------
 
 def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Optional[str]:
-    """Retorna o melhor match para `query` dentro de `cache` se a pontuação
-    atingir o `threshold`; caso contrário, retorna None.
-
-    - Normaliza apenas para comparação (uppercase) antes do matching.
-    - Usa `process.extractOne` que devolve `(string_encontrada, pontuação)`.
+    """
+    Retorna o melhor match para `query` dentro de `cache` com validações rigorosas.
+    
+    Validações aplicadas:
+    1. Match exato tem prioridade
+    2. Fuzzy match com score mínimo
+    3. Validação de proporção de tamanho (evita "TITANIC" → "ATTACK ON TITAN")
+    4. Rejeita matches com diferença de tamanho > 60% e score < 85
+    
+    Args:
+        query: String de busca
+        cache: Lista de strings para buscar
+        threshold: Score mínimo (padrão 75)
+        
+    Returns:
+        Melhor match ou None se não passar nas validações
     """
     if not query or not cache:
         return None
 
-    result = process.extractOne(query.upper(), cache)
+    query_upper = query.upper().strip()
+    
+    # 1. Match exato tem prioridade
+    if query_upper in cache:
+        return query_upper
+    
+    # 2. Fuzzy matching
+    result = process.extractOne(query_upper, cache)
     if not result:
         return None
 
-    value, score = result[0], result[1]
-    return value if score >= threshold else None
+    matched_value, score = result[0], result[1]
+    
+    # 3. Validação básica de score
+    if score < threshold:
+        return None
+    
+    # 4. Validação de proporção de tamanho
+    # Previne matches como "TITANIC" (7) → "ATTACK ON TITAN" (15)
+    len_query = len(query_upper)
+    len_match = len(matched_value)
+    
+    if len_query > 0 and len_match > 0:
+        size_ratio = min(len_query, len_match) / max(len_query, len_match)
+        
+        # Se diferença de tamanho > 40%, exige score muito alto
+        if size_ratio < 0.6:
+            if score < 85:  # Precisa ser praticamente idêntico
+                return None
+    
+    return matched_value
+
+
+def find_best_match_with_suggestions(
+    query: str, 
+    cache: list[str], 
+    threshold: int = 75,
+    max_suggestions: int = 3
+) -> dict:
+    """
+    Versão avançada de find_best_match que retorna match + sugestões.
+    
+    Retorna um dict com:
+    - best_match: Melhor resultado que passou nas validações (ou None)
+    - confidence: Score do melhor match
+    - suggestions: Lista dos top N matches alternativos
+    - rejected_reason: Motivo da rejeição se best_match é None
+    
+    Útil para handlers mostrarem alternativas quando não há match exato.
+    
+    Args:
+        query: String de busca
+        cache: Lista de strings para buscar
+        threshold: Score mínimo
+        max_suggestions: Número máximo de sugestões alternativas
+        
+    Returns:
+        Dict com best_match, confidence, suggestions e rejected_reason
+    """
+    if not query or not cache:
+        return {
+            "best_match": None,
+            "confidence": 0,
+            "suggestions": [],
+            "rejected_reason": "Query ou cache vazio"
+        }
+    
+    query_upper = query.upper().strip()
+    
+    # 1. Match exato
+    if query_upper in cache:
+        return {
+            "best_match": query_upper,
+            "confidence": 100,
+            "suggestions": [],
+            "rejected_reason": None
+        }
+    
+    # 2. Top N fuzzy matches
+    top_matches = process.extract(query_upper, cache, limit=max_suggestions)
+    if not top_matches:
+        return {
+            "best_match": None,
+            "confidence": 0,
+            "suggestions": [],
+            "rejected_reason": "Nenhum match encontrado"
+        }
+    
+    best_title, best_score = top_matches[0]
+    rejected_reason = None
+    
+    # 3. Validações no melhor match
+    best_match = None
+    
+    # Validação A: Score mínimo
+    if best_score >= threshold:
+        # Validação B: Proporção de tamanho
+        len_query = len(query_upper)
+        len_match = len(best_title)
+        
+        if len_query > 0 and len_match > 0:
+            size_ratio = min(len_query, len_match) / max(len_query, len_match)
+            
+            if size_ratio < 0.6 and best_score < 85:
+                rejected_reason = f"Diferença de tamanho muito grande (ratio={size_ratio:.2f})"
+            else:
+                best_match = best_title
+        else:
+            best_match = best_title
+    else:
+        rejected_reason = f"Score muito baixo ({best_score} < {threshold})"
+    
+    # 4. Formata sugestões
+    suggestions = [
+        {"title": title, "score": score} 
+        for title, score in top_matches 
+        if score >= 60  # Mostra apenas sugestões razoáveis
+    ]
+    
+    return {
+        "best_match": best_match,
+        "confidence": best_score,
+        "suggestions": suggestions,
+        "rejected_reason": rejected_reason
+    }
 
 
 def is_valid_genre(query: str, threshold: int = 70) -> bool:
@@ -487,8 +617,30 @@ def find_best_genre(query: str) -> Optional[str]:
 
 
 def find_best_film(query: str) -> Optional[str]:
-    """Wrapper específico para títulos de filmes: usa a cache global de
+    """
+    Wrapper específico para títulos de filmes: usa a cache global de
     títulos carregada no startup da API para fuzzy matching.
+    
+    IMPORTANTE: Esta função usa validações rigorosas para evitar falsos positivos.
+    Use find_best_film_with_suggestions() se quiser ver alternativas quando falha.
     """
     # Usa a FILM_CACHE global definida neste ficheiro
     return find_best_match(query, FILM_CACHE)
+
+
+def find_best_film_with_suggestions(query: str) -> dict:
+    """
+    Versão avançada de find_best_film que retorna match + sugestões.
+    
+    Útil para handlers que querem mostrar alternativas ao usuário quando
+    não há match perfeito (ex: "Titanic" não existe, mas pode sugerir
+    "Attack on Titan" com aviso que pode não ser o desejado).
+    
+    Returns:
+        Dict com:
+        - best_match: Título validado ou None
+        - confidence: Score 0-100
+        - suggestions: Lista de alternativas [{title, score}]
+        - rejected_reason: Motivo se rejeitado
+    """
+    return find_best_match_with_suggestions(query, FILM_CACHE, threshold=75, max_suggestions=3)

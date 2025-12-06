@@ -21,6 +21,19 @@ class BaseHandler:
     Fornece métodos utilitários compartilhados por todos os handlers.
     """
     
+    def _escape_prolog_string(self, text: str) -> str:
+        """
+        Escapa caracteres especiais para uso em strings Prolog.
+        
+        Args:
+            text: Texto a ser escapado
+            
+        Returns:
+            Texto com caracteres especiais escapados
+        """
+        # Escapa aspas simples dobrando-as
+        return text.replace("'", "''")
+    
     async def _query_prolog(self, query_string: str, timeout: float = 2.0) -> List[Dict]:
         """
         Helper para executar query Prolog com timeout.

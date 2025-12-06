@@ -167,28 +167,38 @@ class NLUEngine:
                         
                         # Para diretor_do_filme e atores_do_filme, extrair entidade filme
                         if intent_name in ["diretor_do_filme", "atores_do_filme"]:
-                            # Primeiro tenta com preposições
-                            found = False
-                            preps = ["de ", "do ", "da ", "em ", "no ", "na "]
-                            for prep in preps:
-                                if prep in original_lower:
-                                    idx = original_lower.rfind(prep)
-                                    filme_candidate = original_text[idx + len(prep):].strip().rstrip("?")
-                                    if filme_candidate:
-                                        entities["filme"] = filme_candidate
-                                        found = True
-                                    break
+                            filme_candidate = None
                             
-                            # Se não encontrou, tenta extrair após "dirigiu", "atuou" ou similar
-                            if not found:
-                                verbs = ["dirigiu ", "fez ", "criou ", "atuou ", "atua "]
-                                for verb in verbs:
-                                    if verb in original_lower:
-                                        idx = original_lower.find(verb)
-                                        filme_candidate = original_text[idx + len(verb):].strip().rstrip("?")
-                                        if filme_candidate:
-                                            entities["filme"] = filme_candidate
+                            # Estratégia 1: Busca após o keyword primeiro (mais confiável)
+                            matched_keyword = keyword if keyword in original_lower else keyword_normalized
+                            search_text = original_lower if keyword in original_lower else original_normalized
+                            
+                            if matched_keyword in search_text:
+                                idx = search_text.find(matched_keyword)
+                                after_keyword = original_text[idx + len(matched_keyword):].strip()
+                                
+                                # Remove preposições iniciais se houver
+                                preps = ["de ", "do ", "da ", "em ", "no ", "na "]
+                                for prep in preps:
+                                    if after_keyword.lower().startswith(prep):
+                                        after_keyword = after_keyword[len(prep):].strip()
                                         break
+                                
+                                filme_candidate = after_keyword.rstrip("?")
+                                logger.debug(f"Filme extraído após keyword '{matched_keyword}': '{filme_candidate}'")
+                            
+                            # Estratégia 2: Se não extraiu nada, busca última preposição
+                            if not filme_candidate or len(filme_candidate) < 2:
+                                preps = [" de ", " do ", " da "]  # Com espaço antes para evitar "em" em "quem"
+                                for prep in preps:
+                                    if prep in original_lower:
+                                        idx = original_lower.rfind(prep)
+                                        filme_candidate = original_text[idx + len(prep):].strip().rstrip("?")
+                                        logger.debug(f"Filme extraído via preposição '{prep}': '{filme_candidate}'")
+                                        break
+                            
+                            if filme_candidate:
+                                entities["filme"] = filme_candidate
                         
                         # Para recomendar_filme, extrair gênero se presente
                         if intent_name == "recomendar_filme":

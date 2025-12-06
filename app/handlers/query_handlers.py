@@ -1,14 +1,14 @@
 """
 Query Handlers - Handlers para consultas sobre filmes
 
-Handlers para consultar gênero e diretor de um filme específico.
+Handlers para consultar gênero, diretor e elenco de um filme específico.
 """
 
 from typing import Dict
 
 from .base_handler import BaseHandler
 from ..schemas import ChatResponse, ResponseType
-from ..nlu import find_best_film
+from ..nlu import find_best_film, find_best_film_with_suggestions
 from ..prolog_service import PrologTimeoutError
 
 
@@ -30,20 +30,31 @@ class QueryHandlers(BaseHandler):
                 suggestions=["gênero de Inception", "gênero do Matrix"],
             )
         
-        # Normaliza o título do filme
-        best_match = find_best_film(filme)
+        # Tenta match com sugestões
+        match_result = find_best_film_with_suggestions(filme)
+        best_match = match_result["best_match"]
         
+        # Se não encontrou match válido, mostra sugestões
         if not best_match:
+            suggestions_text = ""
+            if match_result["suggestions"]:
+                top_3 = match_result["suggestions"][:3]
+                suggestions_list = [f"- {s['title']} (similaridade: {s['score']}%)" for s in top_3]
+                suggestions_text = "\n\nTalvez você quis dizer:\n" + "\n".join(suggestions_list)
+            
             return ChatResponse(
                 type=ResponseType.ERROR,
-                content=f"Não encontrei o filme '{filme}' na base de dados.",
+                content=f"❌ Não encontrei o filme **'{filme}'** na base Netflix.{suggestions_text}",
+                suggestions=["filme aleatório", "filmes de ação"],
+                metadata={"rejected_reason": match_result["rejected_reason"]}
             )
         
         # Consulta Prolog com timeout
         try:
+            escaped_match = self._escape_prolog_string(best_match)
             query_string = (
                 f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
-                f"Upper = '{best_match}', imdb_kb:netflix_genre(ID, NomeGenero)"
+                f"Upper = '{escaped_match}', imdb_kb:netflix_genre(ID, NomeGenero)"
             )
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
@@ -77,21 +88,31 @@ class QueryHandlers(BaseHandler):
                 suggestions=["quem dirigiu Matrix?", "diretor de Inception"],
             )
         
-        # Normaliza o título do filme
-        best_match = find_best_film(filme)
+        # Tenta match com sugestões
+        match_result = find_best_film_with_suggestions(filme)
+        best_match = match_result["best_match"]
         
+        # Se não encontrou match válido, mostra sugestões
         if not best_match:
+            suggestions_text = ""
+            if match_result["suggestions"]:
+                top_3 = match_result["suggestions"][:3]
+                suggestions_list = [f"- {s['title']} (similaridade: {s['score']}%)" for s in top_3]
+                suggestions_text = "\n\nTalvez você quis dizer:\n" + "\n".join(suggestions_list)
+            
             return ChatResponse(
                 type=ResponseType.ERROR,
-                content=f"Não encontrei o filme '{filme}' na base de dados.",
-                suggestions=["quem dirigiu Matrix?", "diretor de Titanic"],
+                content=f"❌ Não encontrei o filme **'{filme}'** na base Netflix.{suggestions_text}",
+                suggestions=["filme aleatório", "filmes de ação"],
+                metadata={"rejected_reason": match_result["rejected_reason"]}
             )
         
         # Consulta Prolog para buscar diretor
         try:
+            escaped_match = self._escape_prolog_string(best_match)
             query_string = (
                 f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
-                f"Upper = '{best_match}', imdb_kb:netflix_director(ID, Diretor)"
+                f"Upper = '{escaped_match}', imdb_kb:netflix_director(ID, Diretor)"
             )
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
@@ -134,21 +155,31 @@ class QueryHandlers(BaseHandler):
                 suggestions=["quem atuou em Matrix?", "elenco de Inception"],
             )
         
-        # Normaliza o título do filme
-        best_match = find_best_film(filme)
+        # Tenta match com sugestões
+        match_result = find_best_film_with_suggestions(filme)
+        best_match = match_result["best_match"]
         
+        # Se não encontrou match válido, mostra sugestões
         if not best_match:
+            suggestions_text = ""
+            if match_result["suggestions"]:
+                top_3 = match_result["suggestions"][:3]
+                suggestions_list = [f"- {s['title']} (similaridade: {s['score']}%)" for s in top_3]
+                suggestions_text = "\n\nTalvez você quis dizer:\n" + "\n".join(suggestions_list)
+            
             return ChatResponse(
                 type=ResponseType.ERROR,
-                content=f"Não encontrei o filme '{filme}' na base de dados.",
-                suggestions=["quem atuou em Matrix?", "elenco de Avatar"],
+                content=f"❌ Não encontrei o filme **'{filme}'** na base Netflix.{suggestions_text}",
+                suggestions=["filme aleatório", "filmes de ação"],
+                metadata={"rejected_reason": match_result["rejected_reason"]}
             )
         
         # Consulta Prolog para buscar atores
         try:
+            escaped_match = self._escape_prolog_string(best_match)
             query_string = (
                 f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
-                f"Upper = '{best_match}', imdb_kb:netflix_actor(ID, Ator)"
+                f"Upper = '{escaped_match}', imdb_kb:netflix_actor(ID, Ator)"
             )
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:

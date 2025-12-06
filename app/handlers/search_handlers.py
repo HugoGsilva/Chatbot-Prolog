@@ -46,7 +46,8 @@ class SearchHandlers(BaseHandler):
         
         # Consulta Prolog com timeout
         try:
-            query_string = f"imdb_rules:filmes_por_ator('{best_match}', TituloFilme)"
+            escaped_match = self._escape_prolog_string(best_match)
+            query_string = f"imdb_rules:filmes_por_ator('{escaped_match}', TituloFilme)"
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
             return self._create_timeout_response()
@@ -94,7 +95,8 @@ class SearchHandlers(BaseHandler):
         # Consulta Prolog com timeout
         try:
             genre_query = best_match.upper()
-            query_string = f"imdb_rules:filmes_por_genero('{genre_query}', TituloFilme)"
+            escaped_genre = self._escape_prolog_string(genre_query)
+            query_string = f"imdb_rules:filmes_por_genero('{escaped_genre}', TituloFilme)"
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
             return self._create_timeout_response()
@@ -140,7 +142,8 @@ class SearchHandlers(BaseHandler):
         # Consulta Prolog com timeout
         try:
             director_query = best_match.upper()
-            query_string = f"imdb_rules:filmes_por_diretor('{director_query}', TituloFilme)"
+            escaped_director = self._escape_prolog_string(director_query)
+            query_string = f"imdb_rules:filmes_por_diretor('{escaped_director}', TituloFilme)"
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
             return self._create_timeout_response()
