@@ -493,16 +493,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageContent = wrapper.querySelector('.message-content');
         const messageText = wrapper.querySelector('.message-text');
         
+        if (!messageContent || !messageText) {
+            console.warn('[Copy] Elementos não encontrados para adicionar botão de copiar');
+            return;
+        }
+        
         const copyBtn = document.createElement('button');
         copyBtn.className = 'copy-btn';
         copyBtn.innerHTML = '📋 Copiar';
         copyBtn.setAttribute('aria-label', 'Copiar mensagem');
         
         copyBtn.addEventListener('click', async () => {
-            const text = messageText.textContent;
+            const text = messageText.textContent || messageText.innerText;
             
             try {
-                await navigator.clipboard.writeText(text);
+                // Verifica se a API Clipboard está disponível
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    // Fallback para navegadores antigos
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+                
                 copyBtn.innerHTML = '✓ Copiado';
                 copyBtn.classList.add('copied');
                 
@@ -513,6 +532,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('Erro ao copiar:', err);
                 copyBtn.innerHTML = '✗ Erro';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '📋 Copiar';
+                }, 2000);
             }
         });
         

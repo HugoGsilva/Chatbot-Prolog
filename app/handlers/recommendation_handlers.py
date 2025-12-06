@@ -54,11 +54,7 @@ class RecommendationHandlers(BaseHandler):
         )
         
         # Sugestões contextuais
-        suggestions = ["outro filme aleatório"]
-        if generos:
-            suggestions.insert(0, f"filmes de {generos[0]}")
-        if diretor and diretor != "Unknown":
-            suggestions.append(f"filmes do diretor {diretor.split()[0]}")
+        suggestions = []
         
         return ChatResponse(
             type=ResponseType.TEXT,
@@ -106,9 +102,7 @@ class RecommendationHandlers(BaseHandler):
                             f"🎭 **Diretor:** {diretor_texto}"
                         )
                         
-                        suggestions = [f"outro filme de {best_genre}", "filme aleatório"]
-                        if diretor and diretor != "Unknown":
-                            suggestions.insert(1, f"filmes do diretor {diretor.split()[0]}")
+                        suggestions = []
                         
                         return ChatResponse(
                             type=ResponseType.TEXT,

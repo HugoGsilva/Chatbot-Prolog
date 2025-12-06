@@ -38,7 +38,7 @@ class InfoHandlers(BaseHandler):
         return ChatResponse(
             type=ResponseType.HELP,
             content=help_content,
-            suggestions=["filmes de ação", "filmes do Tom Hanks", "filme aleatório"],
+            suggestions=[],
         )
     
     async def handle_saudacao(
