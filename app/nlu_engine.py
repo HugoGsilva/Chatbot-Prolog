@@ -351,7 +351,7 @@ class NLUEngine:
         
         # ===== VERIFICAÇÃO PRIORITÁRIA: Intents simples (ajuda, saudacao) =====
         # Estas intents têm precedência quando há match exato das keywords
-        priority_intents = ["ajuda", "saudacao", "atores_do_filme", "diretor_do_filme"]
+        priority_intents = ["ajuda", "saudacao", "contar_filmes", "atores_do_filme", "diretor_do_filme"]
         for intent_name in priority_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]

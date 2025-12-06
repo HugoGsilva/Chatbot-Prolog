@@ -38,33 +38,36 @@
 
 % filmes_por_ator(+NomeAtor, -TituloFilme)
 % (Assume que NomeAtor já foi resolvido pelo NLU Nível 2)
+% Filtra apenas Movies, excluindo TV Shows
 filmes_por_ator(NomeAtor, TituloFilme) :-
     imdb_kb:netflix_actor(ShowID, NomeAtor),
-    imdb_kb:netflix_title(ShowID, TituloFilme, _).
+    imdb_kb:netflix_title(ShowID, TituloFilme, _, 'Movie').
 
 % filmes_por_genero(+NomeGenero, -TituloFilme)
 % (Assume que NomeGenero já foi resolvido pelo NLU Nível 2)
+% Filtra apenas Movies, excluindo TV Shows
 filmes_por_genero(NomeGenero, TituloFilme) :-
     imdb_kb:netflix_genre(ShowID, NomeGenero),
-    imdb_kb:netflix_title(ShowID, TituloFilme, _).
+    imdb_kb:netflix_title(ShowID, TituloFilme, _, 'Movie').
 
 % genero_do_filme(+TituloFilmeRaw, -NomeGenero)
 % (Case-insensitive: aceita título em qualquer caixa)
 genero_do_filme(TituloFilmeRaw, NomeGenero) :-
     upcase_atom(TituloFilmeRaw, UpperParam),
-    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _, _),
     upcase_atom(TituloOriginal, UpperFact),
     UpperParam = UpperFact,
     imdb_kb:netflix_genre(ShowID, NomeGenero).
 
 % contar_filmes_por_genero(+NomeGenero, -Contagem)
 % Conta todos os filmes de um gênero específico.
+% Filtra apenas Movies, excluindo TV Shows
 contar_filmes_por_genero(NomeGenero, Contagem) :-
     findall(
         T,
         (
             imdb_kb:netflix_genre(ShowID, NomeGenero),
-            imdb_kb:netflix_title(ShowID, T, _)
+            imdb_kb:netflix_title(ShowID, T, _, 'Movie')
         ),
         Titulos
     ),
@@ -76,7 +79,7 @@ contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
         T,
         (
             imdb_kb:netflix_genre(ShowID, NomeGenero),
-            imdb_kb:netflix_title(ShowID, T, Ano)
+            imdb_kb:netflix_title(ShowID, T, Ano, 'Movie')
         ),
         Titulos
     ),
@@ -98,19 +101,21 @@ recomendar_por_dois_generos(Genero1, Genero2, TituloFilme) :-
 
 % filmes_por_diretor(+NomeDiretor, -TituloFilme)
 % (Assume que NomeDiretor foi resolvido pelo NLU Nível 2)
+% Filtra apenas Movies, excluindo TV Shows
 filmes_por_diretor(NomeDiretor, TituloFilme) :-
     imdb_kb:netflix_director(ShowID, NomeDiretor),
-    imdb_kb:netflix_title(ShowID, TituloFilme, _).
+    imdb_kb:netflix_title(ShowID, TituloFilme, _, 'Movie').
 
 % --- Nova Regra ---
 
 % random_movie(-TituloFilme)
 % Encontra todos os títulos e escolhe um aleatoriamente.
+% Filtra apenas Movies
 random_movie(TituloFilme) :-
-    % 1. Encontra todos os títulos (ignora Ano)
+    % 1. Encontra todos os títulos de Movies (ignora Ano)
     findall(
         Titulo,
-        imdb_kb:netflix_title(_, Titulo, _),
+        imdb_kb:netflix_title(_, Titulo, _, 'Movie'),
         ListaDeFilmes
     ),
     % Garante que a lista não está vazia
@@ -120,12 +125,13 @@ random_movie(TituloFilme) :-
 
 % random_movie_by_genre(+NomeGenero, -TituloFilme)
 % Encontra um filme aleatório de um gênero específico.
+% Filtra apenas Movies
 random_movie_by_genre(NomeGenero, TituloFilme) :-
     findall(
         Titulo,
         (
             imdb_kb:netflix_genre(ShowID, NomeGenero),
-            imdb_kb:netflix_title(ShowID, Titulo, _)
+            imdb_kb:netflix_title(ShowID, Titulo, _, 'Movie')
         ),
         ListaDeFilmes
     ),
@@ -136,21 +142,22 @@ random_movie_by_genre(NomeGenero, TituloFilme) :-
 % Retorna o diretor de um filme específico.
 diretor_de_filme(TituloFilmeRaw, Diretor) :-
     upcase_atom(TituloFilmeRaw, UpperParam),
-    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _, _),
     upcase_atom(TituloOriginal, UpperFact),
     UpperParam = UpperFact,
     imdb_kb:netflix_director(ShowID, Diretor).
 
 % filmes_por_ano(+Ano, -TituloFilme)
 % Retorna filmes lançados em um ano específico.
+% Filtra apenas Movies
 filmes_por_ano(Ano, TituloFilme) :-
-    imdb_kb:netflix_title(_, TituloFilme, Ano).
+    imdb_kb:netflix_title(_, TituloFilme, Ano, 'Movie').
 
 % atores_do_filme(+TituloFilme, -Ator)
 % Retorna os atores de um filme específico.
 atores_do_filme(TituloFilmeRaw, Ator) :-
     upcase_atom(TituloFilmeRaw, UpperParam),
-    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _, _),
     upcase_atom(TituloOriginal, UpperFact),
     UpperParam = UpperFact,
     imdb_kb:netflix_actor(ShowID, Ator).

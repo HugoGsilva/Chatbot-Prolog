@@ -134,9 +134,10 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
     for _, row in df_full.iterrows():
         show_id_pl = quote_sql(row['show_id'])
         title_pl = quote_sql(row['title'])
+        type_pl = quote_sql(row['type'])  # Movie ou TV Show
 
-        # 1. Factos de Títulos
-        all_facts.append(f"netflix_title({show_id_pl}, {title_pl}, {row['release_year']}).")
+        # 1. Factos de Títulos (agora com type)
+        all_facts.append(f"netflix_title({show_id_pl}, {title_pl}, {row['release_year']}, {type_pl}).")
         all_titles.add(row['title'].upper())
 
         # 2. Factos de Género (listed_in)
@@ -171,9 +172,9 @@ def generate_prolog_and_caches(engine, redis_client, prolog_path):
     print(f"[Pipeline] A escrever {len(all_facts)} factos em {prolog_path}...")
     with open(prolog_path, 'w', encoding='utf-8') as f:
         # [V4.13] Exporta também netflix_director/2 no módulo
-        f.write(":- module(imdb_kb, [netflix_title/3, netflix_genre/2, netflix_actor/2, netflix_director/2]).\n")
+        f.write(":- module(imdb_kb, [netflix_title/4, netflix_genre/2, netflix_actor/2, netflix_director/2]).\n")
         # [V4.13] Declara predicados como discontiguous para facilitar geração por blocos
-        f.write(":- discontiguous(netflix_title/3).\n")
+        f.write(":- discontiguous(netflix_title/4).\n")
         f.write(":- discontiguous(netflix_genre/2).\n")
         f.write(":- discontiguous(netflix_actor/2).\n")
         f.write(":- discontiguous(netflix_director/2).\n\n")

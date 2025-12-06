@@ -30,9 +30,9 @@ class FilterHandlers(BaseHandler):
                 suggestions=["filmes de 2020", "filmes de 2019"],
             )
         
-        # Consulta Prolog para buscar filmes do ano
+        # Consulta Prolog para buscar filmes do ano (apenas Movies)
         try:
-            query_string = f"imdb_kb:netflix_title(_, TituloFilme, {ano})"
+            query_string = f"imdb_kb:netflix_title(_, TituloFilme, {ano}, 'Movie')"
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
             return self._create_timeout_response()
@@ -103,13 +103,16 @@ class FilterHandlers(BaseHandler):
         contagem = results[0]["Contagem"]
         
         if ano:
-            message = f"Encontrei **{contagem}** filmes de {best_genre} em {ano}."
+            message = f"📊 Encontrei **{contagem}** filmes de **{best_genre}** em **{ano}**."
+            suggestions = [f"filmes de {best_genre} em {ano}", "filme aleatório"]
         else:
-            message = f"Encontrei **{contagem}** filmes de {best_genre}."
+            message = f"📊 Encontrei **{contagem}** filmes de **{best_genre}**."
+            suggestions = [f"filmes de {best_genre}", "filme aleatório"]
         
         return ChatResponse(
             type=ResponseType.TEXT,
             content=message,
+            suggestions=suggestions,
         )
     
     async def handle_filmes_com_filtros(

@@ -53,7 +53,7 @@ class QueryHandlers(BaseHandler):
         try:
             escaped_match = self._escape_prolog_string(best_match)
             query_string = (
-                f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
+                f"imdb_kb:netflix_title(ID, Titulo, _, _), upcase_atom(Titulo, Upper), "
                 f"Upper = '{escaped_match}', imdb_kb:netflix_genre(ID, NomeGenero)"
             )
             results = await self._query_prolog(query_string)
@@ -111,7 +111,7 @@ class QueryHandlers(BaseHandler):
         try:
             escaped_match = self._escape_prolog_string(best_match)
             query_string = (
-                f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
+                f"imdb_kb:netflix_title(ID, Titulo, _, _), upcase_atom(Titulo, Upper), "
                 f"Upper = '{escaped_match}', imdb_kb:netflix_director(ID, Diretor)"
             )
             results = await self._query_prolog(query_string)
@@ -178,7 +178,7 @@ class QueryHandlers(BaseHandler):
         try:
             escaped_match = self._escape_prolog_string(best_match)
             query_string = (
-                f"imdb_kb:netflix_title(ID, Titulo, _), upcase_atom(Titulo, Upper), "
+                f"imdb_kb:netflix_title(ID, Titulo, _, _), upcase_atom(Titulo, Upper), "
                 f"Upper = '{escaped_match}', imdb_kb:netflix_actor(ID, Ator)"
             )
             results = await self._query_prolog(query_string)
