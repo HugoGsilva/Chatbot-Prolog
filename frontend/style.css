@@ -1,42 +1,49 @@
 /*
-  Estilos Modernos do Chatbot Netflix-Prolog - Versão Intermediária
-  Propósito: Design moderno com glassmorphism, gradientes e animações suaves
-  Features: Avatares, quick actions, copy buttons, responsividade mobile-first
+  Estilos Modernos do Chatbot Netflix-Prolog - Windows Metro Style
+  Propósito: Design inspirado em Windows Metro com cores azul claro e elementos flat
+  Features: Flat design, tiles, tipografia clean, sem gradientes
 */
 
 :root {
-    /* Cores principais */
-    --bg-gradient-start: #0a1410;
-    --bg-gradient-end: #0f1e1a;
-    --container-bg: rgba(30, 48, 40, 0.8);
-    --chat-window-bg: rgba(20, 35, 28, 0.6);
+    /* Cores principais - Metro Blue */
+    --bg-gradient-start: #f0f7ff;
+    --bg-gradient-end: #e6f3ff;
+    --container-bg: #ffffff;
+    --chat-window-bg: #fafcff;
     
-    /* Cores de mensagens */
-    --bot-bubble-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    --user-bubble-bg: rgba(52, 73, 62, 0.9);
+    /* Cores de mensagens - Flat Metro */
+    --bot-bubble-bg: #0078d4;
+    --user-bubble-bg: #e3f2fd;
     
     /* Cores de texto */
-    --text-primary: #e8f5ed;
-    --text-secondary: #a0c4b0;
-    --text-muted: #6a8675;
+    --text-primary: #1f1f1f;
+    --text-secondary: #5e5e5e;
+    --text-muted: #8e8e8e;
     
-    /* Cores de destaque */
-    --accent-primary: #10b981;
-    --accent-secondary: #059669;
-    --accent-success: #10b981;
-    --accent-error: #ef4444;
-    --accent-warning: #f59e0b;
+    /* Cores de destaque - Metro Palette */
+    --accent-primary: #0078d4;
+    --accent-secondary: #005a9e;
+    --accent-success: #107c10;
+    --accent-error: #e81123;
+    --accent-warning: #ff8c00;
     
-    /* Bordas e sombras */
-    --border-color: rgba(52, 73, 62, 0.3);
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.4);
+    /* Bordas e sombras - Minimalista */
+    --border-color: #e8e8e8;
+    --border-accent: #0078d4;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-glow: none;
     
-    /* Tipografia */
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-full: 50%;
+    
+    /* Tipografia - Metro */
+    --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    --font-mono: 'Consolas', 'Courier New', monospace;
     
     /* Espaçamentos */
     --spacing-xs: 4px;
@@ -59,54 +66,42 @@
 
 body {
     font-family: var(--font-family);
-    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-    background-attachment: fixed;
+    background: var(--bg-gradient-start);
     color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: var(--spacing-md);
+    padding: 0;
+    margin: 0;
     overflow: hidden;
 }
 
-/* Container Principal */
+/* Container Principal - Metro Style */
 .chatbot-container {
     width: 100%;
-    max-width: 900px;
-    height: 95vh;
+    max-width: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--container-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
-    animation: slideIn 0.4s ease-out;
 }
 
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Status Bar */
+/* Status Bar - Minimalista */
 .status-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-sm) var(--spacing-lg);
-    background: rgba(0, 0, 0, 0.3);
+    padding: 10px 24px;
+    background: white;
     border-bottom: 1px solid var(--border-color);
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    font-weight: 400;
 }
 
 .status-indicator {
@@ -118,19 +113,12 @@ body {
 .status-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     background: var(--accent-error);
-    animation: pulse 2s ease-in-out infinite;
 }
 
 .status-dot.connected {
     background: var(--accent-success);
-    animation: none;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
 }
 
 .latency-indicator {
@@ -138,10 +126,10 @@ body {
     font-size: 0.7rem;
 }
 
-/* Header */
+/* Header - Minimalista */
 .chatbot-header {
-    padding: var(--spacing-lg);
-    background: rgba(0, 0, 0, 0.2);
+    padding: 20px 24px;
+    background: white;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -159,24 +147,16 @@ body {
 }
 
 .logo {
-    font-size: 2.5rem;
-    filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.6));
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
+    font-size: 2rem;
+    filter: none;
 }
 
 .chatbot-header h1 {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: var(--spacing-xs);
+    color: var(--accent-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
 }
 
 .chatbot-header .subtitle {
@@ -188,23 +168,28 @@ body {
 .clear-btn {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #ff6b6b;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #f5f8ff;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
     font-size: 0.85rem;
     font-weight: 500;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all 0.15s ease;
 }
 
 .clear-btn:hover {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: #ef4444;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.clear-btn:active {
+    transform: scale(0.98);
 }
 
 .clear-btn svg {
@@ -212,12 +197,12 @@ body {
     height: 16px;
 }
 
-/* Quick Actions */
+/* Quick Actions - Minimalista */
 .quick-actions {
     display: flex;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: rgba(0, 0, 0, 0.15);
+    gap: 10px;
+    padding: 16px 24px;
+    background: white;
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
     scrollbar-width: none;
@@ -229,53 +214,54 @@ body {
 
 .quick-action-btn {
     flex-shrink: 0;
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: var(--text-primary);
+    padding: 10px 18px;
+    background: #f5f8ff;
+    border: 1px solid var(--border-color);
+    color: var(--accent-primary);
     font-size: 0.85rem;
     font-weight: 500;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
     white-space: nowrap;
 }
 
 .quick-action-btn:hover {
-    background: rgba(16, 185, 129, 0.25);
+    background: var(--accent-primary);
     border-color: var(--accent-primary);
-    transform: translateY(-2px);
+    color: white;
+    transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
 }
 
 .quick-action-btn:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
-/* Chat Window */
+/* Chat Window - Metro */
 .chat-window {
     flex: 1;
-    padding: var(--spacing-lg);
+    padding: 20px;
     overflow-y: auto;
     background: var(--chat-window-bg);
     scroll-behavior: smooth;
 }
 
 .chat-window::-webkit-scrollbar {
-    width: 6px;
+    width: 12px;
 }
 
 .chat-window::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f0f0f0;
 }
 
 .chat-window::-webkit-scrollbar-thumb {
-    background: rgba(16, 185, 129, 0.3);
-    border-radius: 3px;
+    background: var(--accent-primary);
+    border-radius: 0;
 }
 
 .chat-window::-webkit-scrollbar-thumb:hover {
-    background: rgba(16, 185, 129, 0.5);
+    background: var(--accent-secondary);
 }
 
 #chat-log {
@@ -284,22 +270,10 @@ body {
     gap: var(--spacing-lg);
 }
 
-/* Message Wrappers */
+/* Message Wrappers - Metro */
 .message-wrapper {
     display: flex;
-    gap: var(--spacing-md);
-    animation: messageSlideIn 0.3s ease-out;
-}
-
-@keyframes messageSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    gap: 12px;
 }
 
 .bot-wrapper {
@@ -311,25 +285,22 @@ body {
     flex-direction: row-reverse;
 }
 
-/* Avatares */
+/* Avatares - Minimalista */
 .avatar {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    box-shadow: var(--shadow-sm);
-}
-
-.bot-avatar {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    font-size: 1.1rem;
+    background: var(--accent-primary);
+    color: white;
 }
 
 .user-avatar {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: #64b5f6;
 }
 
 /* Message Content */
@@ -342,8 +313,8 @@ body {
 }
 
 .message-bubble {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-radius: 18px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
     line-height: 1.6;
     position: relative;
     word-wrap: break-word;
@@ -352,15 +323,15 @@ body {
 .bot-bubble {
     background: var(--bot-bubble-bg);
     color: white;
-    border-bottom-left-radius: 6px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
+    border: none;
 }
 
 .user-bubble {
     background: var(--user-bubble-bg);
     color: var(--text-primary);
-    border-bottom-right-radius: 6px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
+    border: 1px solid var(--border-color);
 }
 
 .message-text {
@@ -394,12 +365,13 @@ body {
 }
 
 .message-text code {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 2px 6px;
+    background: #f5f8ff;
+    padding: 3px 6px;
     border-radius: 4px;
     font-family: var(--font-mono);
     font-size: 0.85em;
-    color: #86efac;
+    color: var(--accent-primary);
+    border: 1px solid #d4e4ff;
 }
 
 .message-text pre {
@@ -415,37 +387,41 @@ body {
     padding: 0;
 }
 
-/* Copy Button */
+/* Copy Button - Minimalista */
 .copy-btn {
     align-self: flex-start;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     color: var(--text-secondary);
     font-size: 0.75rem;
-    border-radius: 6px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: 4px;
 }
 
 .copy-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--text-primary);
+    background: white;
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .copy-btn.copied {
-    background: rgba(16, 185, 129, 0.2);
+    background: #e8f5e9;
     border-color: var(--accent-success);
     color: var(--accent-success);
 }
 
-/* Welcome Message */
+/* Welcome Message - Minimalista */
 .welcome-message .message-bubble {
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: #f5f8ff;
+    color: var(--text-primary);
+    border: 1px solid #d4e4ff;
 }
 
 /* Loading Indicator */
@@ -490,20 +466,23 @@ body {
 }
 
 .suggestion-btn {
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: var(--text-primary);
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--accent-primary);
     font-size: 0.85rem;
-    border-radius: 16px;
+    font-weight: 500;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.15s ease;
 }
 
 .suggestion-btn:hover {
-    background: rgba(16, 185, 129, 0.25);
+    background: var(--accent-primary);
     border-color: var(--accent-primary);
-    transform: translateY(-2px);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .suggestion-clickable {
@@ -537,18 +516,18 @@ body {
 
 .input-wrapper {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 10px;
     align-items: center;
-    background: rgba(38, 38, 43, 0.6);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    padding: var(--spacing-sm);
-    transition: all var(--transition-fast);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 6px 12px;
+    transition: all 0.15s ease;
 }
 
 .input-wrapper:focus-within {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.08);
 }
 
 .chat-input {
@@ -573,21 +552,22 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: var(--accent-primary);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
+    transition: all 0.15s ease;
+    box-shadow: none;
 }
 
 .send-button:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md), var(--shadow-glow);
+    background: var(--accent-secondary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .send-button:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
 .send-button:disabled {
