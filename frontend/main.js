@@ -1,10 +1,14 @@
 /**
- * Frontend Thin Client para o Chatbot Netflix-Prolog.
+ * Frontend Thin Client Moderno para o Chatbot Netflix-Prolog - Versão Intermediária
  * 
- * Fase 3 - Arquitetura Thin Client:
- * - Toda lógica de NLU, roteamento e processamento está no backend
- * - Frontend apenas envia texto bruto e renderiza respostas estruturadas
- * - Sessão gerida pelo servidor com TTL de 24h
+ * Features:
+ * - Markdown rendering com marked.js
+ * - Copy to clipboard em mensagens do bot
+ * - Indicador de latência em tempo real
+ * - Quick actions dinâmicas
+ * - Animações suaves de entrada
+ * - Status de conexão visual
+ * - Scroll inteligente
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- REFERÊNCIAS DOM ---
@@ -13,23 +17,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.getElementById('send-button');
     const chatWindow = document.getElementById('chat-window');
     const clearButton = document.getElementById('clear-button');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const latencyIndicator = document.getElementById('latency-indicator');
+    const quickActionsContainer = document.getElementById('quick-actions');
 
     // --- CONFIGURAÇÃO ---
     const API_BASE_URL = '';  // Relativo ao mesmo host
     const SESSION_STORAGE_KEY = 'chatbot_session_id';
     const SESSION_TIMESTAMP_KEY = 'chatbot_session_timestamp';
 
+    // Configurar marked.js
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+    }
+
+    // --- GESTÃO DE ESTADO ---
+    let isUserScrolling = false;
+    let scrollTimeout = null;
+    let lastRequestTime = 0;
+
+    // Detectar quando usuário está scrollando manualmente
+    chatWindow.addEventListener('scroll', () => {
+        const isAtBottom = chatWindow.scrollHeight - chatWindow.scrollTop <= chatWindow.clientHeight + 50;
+        isUserScrolling = !isAtBottom;
+        
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            isUserScrolling = false;
+        }, 1000);
+    });
+
     // --- GESTÃO DE SESSÃO ---
     
     /**
      * Obtém ou cria um session_id.
-     * Se não existir no localStorage, solicita ao servidor.
      */
     async function getOrCreateSessionId() {
         let sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
         const timestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY);
         
-        // Verifica se sessão existe e não está muito antiga (> 23h)
         if (sessionId && timestamp) {
             const age = Date.now() - parseInt(timestamp, 10);
             const hoursOld = age / (1000 * 60 * 60);
@@ -50,20 +82,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionId = data.session_id;
                     localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
                     localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+                    updateStatus(true);
                 } else {
-                    // Fallback: gerar ID localmente se servidor falhar
                     sessionId = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
                     localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
                     localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
-                    console.warn('[Session] Fallback para sessão local:', sessionId);
+                    updateStatus(false, 'Sessão local');
                 }
             } catch (error) {
-                // Fallback em caso de erro de rede
                 sessionId = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
                 localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
                 localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
-                console.warn('[Session] Erro de rede, usando sessão local:', sessionId);
+                updateStatus(false, 'Offline');
             }
+        } else {
+            updateStatus(true);
         }
         
         return sessionId;
@@ -81,41 +114,86 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'DELETE'
                 });
             } catch (error) {
-                console.warn('[Session] Erro ao deletar sessão no servidor:', error);
+                console.warn('[Session] Erro ao deletar sessão:', error);
             }
         }
         
         localStorage.removeItem(SESSION_STORAGE_KEY);
         localStorage.removeItem(SESSION_TIMESTAMP_KEY);
         
-        // Limpa o chat visualmente (mantém apenas a mensagem de boas-vindas)
-        const welcomeMessage = chatLog.querySelector('.help-text');
+        // Limpa o chat (mantém apenas welcome message)
+        const welcomeMessage = chatLog.querySelector('.welcome-message');
         chatLog.innerHTML = '';
         if (welcomeMessage) {
             chatLog.appendChild(welcomeMessage.cloneNode(true));
         }
         
-        // Cria nova sessão
         await getOrCreateSessionId();
         
-        displaySystemMessage('Conversa limpa. Nova sessão iniciada.');
+        displaySystemMessage('✨ Nova conversa iniciada');
+    }
+
+    // --- STATUS DE CONEXÃO ---
+    
+    /**
+     * Atualiza o indicador de status de conexão.
+     */
+    function updateStatus(isConnected, message = null) {
+        if (isConnected) {
+            statusDot.classList.add('connected');
+            statusText.textContent = message || 'Conectado';
+        } else {
+            statusDot.classList.remove('connected');
+            statusText.textContent = message || 'Desconectado';
+        }
+    }
+
+    /**
+     * Atualiza o indicador de latência.
+     */
+    function updateLatency(ms) {
+        if (ms < 500) {
+            latencyIndicator.innerHTML = `⚡ ${ms}ms`;
+            latencyIndicator.style.color = 'var(--accent-success)';
+        } else if (ms < 1500) {
+            latencyIndicator.innerHTML = `⏱️ ${ms}ms`;
+            latencyIndicator.style.color = 'var(--accent-warning)';
+        } else {
+            latencyIndicator.innerHTML = `🐌 ${ms}ms`;
+            latencyIndicator.style.color = 'var(--accent-error)';
+        }
     }
 
     // --- INDICADORES DE LOADING ---
     
     /**
-     * Mostra indicador de carregamento (typing dots).
+     * Mostra indicador de carregamento.
      */
     function showLoadingIndicator() {
         const existingLoader = document.getElementById('loading-indicator');
         if (existingLoader) return;
         
-        const loader = document.createElement('div');
-        loader.id = 'loading-indicator';
-        loader.className = 'chat-message bot-message loading-indicator';
-        loader.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-        loader.setAttribute('aria-label', 'Carregando resposta...');
-        chatLog.appendChild(loader);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper bot-wrapper';
+        wrapper.id = 'loading-indicator';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar bot-avatar';
+        avatar.textContent = '🤖';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble bot-bubble loading-indicator';
+        bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        bubble.setAttribute('aria-label', 'Processando...');
+        
+        messageContent.appendChild(bubble);
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(messageContent);
+        chatLog.appendChild(wrapper);
+        
         scrollToBottom();
     }
 
@@ -133,11 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Envia mensagem para o endpoint /chat.
-     * @param {string} text - Texto bruto do utilizador
-     * @returns {Promise<Object>} - Resposta estruturada do backend
      */
     async function sendMessage(text) {
         const sessionId = await getOrCreateSessionId();
+        const startTime = Date.now();
         
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
@@ -150,9 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
             })
         });
         
+        const latency = Date.now() - startTime;
+        updateLatency(latency);
+        
         if (!response.ok) {
+            updateStatus(false, 'Erro de conexão');
             if (response.status === 429) {
-                throw new Error('Muitas requisições. Aguarde um momento antes de enviar outra mensagem.');
+                throw new Error('Muitas requisições. Aguarde um momento.');
             }
             if (response.status === 422) {
                 const errorData = await response.json();
@@ -161,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(`Erro do servidor (${response.status})`);
         }
         
+        updateStatus(true);
         return await response.json();
     }
 
@@ -168,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Renderiza resposta do backend baseado no tipo.
-     * @param {Object} response - Resposta estruturada do backend
      */
     function renderResponse(response) {
         const { type, content, suggestions, metadata } = response;
@@ -190,72 +271,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderClarificationResponse(content, suggestions);
                 break;
             default:
-                // Fallback para qualquer tipo não reconhecido
                 renderTextResponse(typeof content === 'string' ? content : JSON.stringify(content));
         }
         
-        // Renderiza sugestões se existirem
         if (suggestions && suggestions.length > 0 && type !== 'error' && type !== 'clarification') {
             renderSuggestions(suggestions);
         }
     }
 
     /**
-     * Renderiza resposta do tipo lista (filmes, géneros, etc.)
+     * Renderiza resposta de texto com markdown.
      */
-    function renderListResponse(content, metadata) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message bot-message list-response';
+    function renderTextResponse(content) {
+        const wrapper = createMessageWrapper('bot');
+        const messageText = wrapper.querySelector('.message-text');
         
-        // Se for array de objetos com 'titulo'
-        if (Array.isArray(content)) {
-            const items = content.slice(0, 20); // Limita a 20 itens para UI
-            
-            if (items.length > 0 && typeof items[0] === 'object') {
-                // Lista de filmes
-                if ('titulo' in items[0]) {
-                    const titlesList = items.map(item => item.titulo).join(', ');
-                    messageDiv.innerHTML = `
-                        <p class="list-header">Encontrados ${content.length} resultado(s):</p>
-                        <p class="list-content">${escapeHtml(titlesList)}</p>
-                        ${content.length > 20 ? `<p class="list-more">... e mais ${content.length - 20} resultados</p>` : ''}
-                    `;
-                } 
-                // Lista de géneros
-                else if ('nome' in items[0]) {
-                    const genresList = items.map(g => capitalize(g.nome)).join(', ');
-                    messageDiv.innerHTML = `<p>${escapeHtml(genresList)}</p>`;
-                }
-                else {
-                    messageDiv.textContent = JSON.stringify(content);
-                }
-            } else {
-                // Array de strings
-                messageDiv.innerHTML = `<p>${escapeHtml(items.join(', '))}</p>`;
-            }
-        } else if (typeof content === 'object') {
-            // Objeto único (ex: contagem)
-            if ('genero' in content && 'contagem' in content) {
-                messageDiv.innerHTML = `<p>Contagem: <strong>${content.contagem}</strong> filmes</p>`;
-            } else {
-                messageDiv.textContent = JSON.stringify(content);
-            }
+        // Renderizar markdown
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(content);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
         } else {
-            messageDiv.textContent = String(content);
+            messageText.textContent = content;
         }
         
-        chatLog.appendChild(messageDiv);
+        chatLog.appendChild(wrapper);
+        addCopyButton(wrapper);
         scrollToBottom();
     }
 
     /**
-     * Renderiza resposta do tipo texto simples.
+     * Renderiza resposta de lista.
      */
-    function renderTextResponse(content) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message bot-message text-response';
-        messageDiv.textContent = content;
-        chatLog.appendChild(messageDiv);
+    function renderListResponse(content, metadata) {
+        const wrapper = createMessageWrapper('bot');
+        const messageText = wrapper.querySelector('.message-text');
+        
+        let textContent = '';
+        
+        if (Array.isArray(content)) {
+            const items = content.slice(0, 20);
+            
+            if (items.length > 0 && typeof items[0] === 'object') {
+                if ('titulo' in items[0]) {
+                    textContent = `**Encontrados ${content.length} resultado(s):**\n\n`;
+                    textContent += items.map(item => `• ${item.titulo}`).join('\n');
+                    if (content.length > 20) {
+                        textContent += `\n\n*... e mais ${content.length - 20} resultados*`;
+                    }
+                } else if ('nome' in items[0]) {
+                    textContent = items.map(g => capitalize(g.nome)).join(', ');
+                } else {
+                    textContent = JSON.stringify(content);
+                }
+            } else {
+                textContent = items.join(', ');
+            }
+        } else if (typeof content === 'object') {
+            if ('genero' in content && 'contagem' in content) {
+                textContent = `📊 Encontrei **${content.contagem}** filmes`;
+            } else {
+                textContent = JSON.stringify(content);
+            }
+        } else {
+            textContent = String(content);
+        }
+        
+        // Renderizar markdown
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(textContent);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
+        } else {
+            messageText.textContent = textContent;
+        }
+        
+        chatLog.appendChild(wrapper);
+        addCopyButton(wrapper);
         scrollToBottom();
     }
 
@@ -263,22 +355,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renderiza resposta de erro.
      */
     function renderErrorResponse(content, suggestions) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message bot-message error-response';
-        messageDiv.setAttribute('role', 'alert');
+        const wrapper = createMessageWrapper('bot');
+        const bubble = wrapper.querySelector('.message-bubble');
+        const messageText = wrapper.querySelector('.message-text');
         
-        let html = `<p class="error-content">⚠️ ${escapeHtml(content)}</p>`;
+        bubble.style.background = 'rgba(239, 68, 68, 0.15)';
+        bubble.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        
+        let textContent = `⚠️ ${content}`;
         
         if (suggestions && suggestions.length > 0) {
-            html += '<ul class="error-suggestions">';
-            suggestions.forEach(s => {
-                html += `<li>${escapeHtml(s)}</li>`;
-            });
-            html += '</ul>';
+            textContent += '\n\n**Sugestões:**\n';
+            textContent += suggestions.map(s => `• ${s}`).join('\n');
         }
         
-        messageDiv.innerHTML = html;
-        chatLog.appendChild(messageDiv);
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(textContent);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
+        } else {
+            messageText.textContent = textContent;
+        }
+        
+        chatLog.appendChild(wrapper);
         scrollToBottom();
     }
 
@@ -286,78 +385,147 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renderiza resposta de ajuda.
      */
     function renderHelpResponse(content) {
-        console.log('[DEBUG] renderHelpResponse content:', content);
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message bot-message help-response';
+        const wrapper = createMessageWrapper('bot');
+        const messageText = wrapper.querySelector('.message-text');
+        
+        let textContent = '';
         
         if (typeof content === 'object' && content.message && content.examples) {
-            let html = `<p class="help-message">${escapeHtml(content.message)}</p>`;
-            html += '<div class="help-examples">';
+            textContent = `${content.message}\n\n`;
             
-            // Suporta tanto array quanto objeto de exemplos
             if (Array.isArray(content.examples)) {
-                html += '<ul>';
                 content.examples.forEach(ex => {
-                    html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
+                    textContent += `• \`${ex}\`\n`;
                 });
-                html += '</ul>';
             } else if (typeof content.examples === 'object') {
-                // Objeto com categorias -> arrays de exemplos
                 for (const [category, examples] of Object.entries(content.examples)) {
-                    html += `<div class="help-category">`;
-                    html += `<strong>${escapeHtml(category)}:</strong>`;
-                    html += '<ul>';
+                    textContent += `**${category}:**\n`;
                     if (Array.isArray(examples)) {
                         examples.forEach(ex => {
-                            html += `<li><code class="suggestion-clickable" data-query="${escapeAttr(ex)}">${escapeHtml(ex)}</code></li>`;
+                            textContent += `• \`${ex}\`\n`;
                         });
                     }
-                    html += '</ul></div>';
+                    textContent += '\n';
                 }
             }
-            
-            html += '</div>';
-            messageDiv.innerHTML = html;
         } else {
-            messageDiv.textContent = typeof content === 'string' ? content : JSON.stringify(content);
+            textContent = typeof content === 'string' ? content : JSON.stringify(content);
         }
         
-        chatLog.appendChild(messageDiv);
-        scrollToBottom();
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(textContent);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
+        } else {
+            messageText.textContent = textContent;
+        }
         
-        // Adiciona listeners para exemplos clicáveis
-        addClickableListeners(messageDiv);
+        chatLog.appendChild(wrapper);
+        addCopyButton(wrapper);
+        addClickableCodeListeners(wrapper);
+        scrollToBottom();
     }
 
     /**
-     * Renderiza resposta de clarificação (baixa confiança).
+     * Renderiza resposta de clarificação.
      */
     function renderClarificationResponse(content, suggestions) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message bot-message clarification-response';
+        const wrapper = createMessageWrapper('bot');
+        const messageText = wrapper.querySelector('.message-text');
         
-        let html = `<p>${escapeHtml(content)}</p>`;
+        let textContent = `${content}\n\n`;
         
         if (suggestions && suggestions.length > 0) {
-            html += '<div class="clarification-suggestions">';
+            textContent += '**Você quis dizer:**\n';
             suggestions.forEach(s => {
-                html += `<button class="suggestion-btn" data-query="${escapeAttr(s)}">${escapeHtml(s)}</button>`;
+                textContent += `• ${s}\n`;
             });
-            html += '</div>';
         }
         
-        messageDiv.innerHTML = html;
-        chatLog.appendChild(messageDiv);
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(textContent);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
+        } else {
+            messageText.textContent = textContent;
+        }
+        
+        chatLog.appendChild(wrapper);
         scrollToBottom();
         
-        // Adiciona listeners para sugestões clicáveis
-        addClickableListeners(messageDiv);
+        if (suggestions && suggestions.length > 0) {
+            renderSuggestions(suggestions);
+        }
+    }
+
+    /**
+     * Cria estrutura base de mensagem.
+     */
+    function createMessageWrapper(sender) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${sender}-wrapper`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = `avatar ${sender}-avatar`;
+        avatar.textContent = sender === 'bot' ? '🤖' : '👤';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
+        const bubble = document.createElement('div');
+        bubble.className = `message-bubble ${sender}-bubble`;
+        
+        const messageText = document.createElement('div');
+        messageText.className = 'message-text';
+        
+        bubble.appendChild(messageText);
+        messageContent.appendChild(bubble);
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(messageContent);
+        
+        return wrapper;
+    }
+
+    /**
+     * Adiciona botão de copiar à mensagem do bot.
+     */
+    function addCopyButton(wrapper) {
+        const messageContent = wrapper.querySelector('.message-content');
+        const messageText = wrapper.querySelector('.message-text');
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '📋 Copiar';
+        copyBtn.setAttribute('aria-label', 'Copiar mensagem');
+        
+        copyBtn.addEventListener('click', async () => {
+            const text = messageText.textContent;
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                copyBtn.innerHTML = '✓ Copiado';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = '📋 Copiar';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('Erro ao copiar:', err);
+                copyBtn.innerHTML = '✗ Erro';
+            }
+        });
+        
+        messageContent.appendChild(copyBtn);
     }
 
     /**
      * Renderiza sugestões clicáveis.
      */
     function renderSuggestions(suggestions) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper bot-wrapper';
+        
         const suggestionsDiv = document.createElement('div');
         suggestionsDiv.className = 'suggestions-container';
         
@@ -369,19 +537,39 @@ document.addEventListener('DOMContentLoaded', () => {
             suggestionsDiv.appendChild(btn);
         });
         
-        chatLog.appendChild(suggestionsDiv);
+        wrapper.appendChild(document.createElement('div')); // Spacer for avatar
+        wrapper.appendChild(suggestionsDiv);
+        
+        chatLog.appendChild(wrapper);
         scrollToBottom();
         
-        addClickableListeners(suggestionsDiv);
+        addClickableListeners(wrapper);
     }
 
     /**
      * Adiciona listeners para elementos clicáveis.
      */
     function addClickableListeners(container) {
-        container.querySelectorAll('.suggestion-btn, .suggestion-clickable').forEach(el => {
+        container.querySelectorAll('.suggestion-btn').forEach(el => {
             el.addEventListener('click', async () => {
                 const query = el.dataset.query;
+                if (query) {
+                    userInput.value = query;
+                    await handleSendMessage();
+                }
+            });
+        });
+    }
+
+    /**
+     * Adiciona listeners para código clicável em ajuda.
+     */
+    function addClickableCodeListeners(container) {
+        container.querySelectorAll('code').forEach(el => {
+            el.classList.add('suggestion-clickable');
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', async () => {
+                const query = el.textContent;
                 if (query) {
                     userInput.value = query;
                     await handleSendMessage();
@@ -394,38 +582,46 @@ document.addEventListener('DOMContentLoaded', () => {
      * Mostra mensagem do utilizador no chat.
      */
     function displayUserMessage(text) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message user-message';
-        messageDiv.textContent = text;
-        chatLog.appendChild(messageDiv);
+        const wrapper = createMessageWrapper('user');
+        const messageText = wrapper.querySelector('.message-text');
+        messageText.textContent = text;
+        chatLog.appendChild(wrapper);
         scrollToBottom();
     }
 
     /**
-     * Mostra mensagem do sistema (informativa).
+     * Mostra mensagem do sistema.
      */
     function displaySystemMessage(text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper';
+        
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message system-message';
+        messageDiv.className = 'message-bubble';
+        messageDiv.style.background = 'transparent';
+        messageDiv.style.border = 'none';
+        messageDiv.style.color = 'var(--text-muted)';
+        messageDiv.style.fontSize = '0.85rem';
+        messageDiv.style.fontStyle = 'italic';
+        messageDiv.style.textAlign = 'center';
+        messageDiv.style.alignSelf = 'center';
+        messageDiv.style.maxWidth = '100%';
         messageDiv.textContent = text;
-        chatLog.appendChild(messageDiv);
+        
+        wrapper.appendChild(messageDiv);
+        chatLog.appendChild(wrapper);
         scrollToBottom();
     }
 
     // --- UTILIDADES ---
 
     function scrollToBottom() {
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function escapeAttr(text) {
-        return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        if (!isUserScrolling) {
+            chatWindow.scrollTo({
+                top: chatWindow.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
     }
 
     function capitalize(str) {
@@ -442,29 +638,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = userInput.value.trim();
         if (!text) return;
         
-        // Mostra mensagem do utilizador
         displayUserMessage(text);
         userInput.value = '';
         userInput.disabled = true;
         sendButton.disabled = true;
         
-        // Mostra indicador de carregamento
         showLoadingIndicator();
         
         try {
-            // Envia para o backend
             const response = await sendMessage(text);
-            
-            // Remove indicador e renderiza resposta
             hideLoadingIndicator();
             renderResponse(response);
-            
         } catch (error) {
-            console.error('[DEBUG] handleSendMessage error:', error);
+            console.error('[Error]', error);
             hideLoadingIndicator();
             renderErrorResponse(
                 error.message || 'Desculpe, ocorreu um erro ao processar sua mensagem.',
-                ['Tente novamente', 'Digite "ajuda" para ver comandos disponíveis']
+                ['Tente novamente', 'Digite "ajuda" para ver comandos']
             );
         } finally {
             userInput.disabled = false;
@@ -473,9 +663,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- QUICK ACTIONS ---
+    
+    /**
+     * Configura quick actions.
+     */
+    function setupQuickActions() {
+        quickActionsContainer.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const query = btn.dataset.query;
+                if (query) {
+                    userInput.value = query;
+                    await handleSendMessage();
+                }
+            });
+        });
+    }
+
     // --- INICIALIZAÇÃO ---
 
-    // Event listeners
     sendButton.addEventListener('click', handleSendMessage);
     
     userInput.addEventListener('keydown', (ev) => {
@@ -485,14 +691,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Botão de limpar conversa (se existir)
     if (clearButton) {
         clearButton.addEventListener('click', clearSession);
     }
 
-    // Inicializa sessão ao carregar
+    setupQuickActions();
     getOrCreateSessionId();
-
-    // Focus no input
     userInput.focus();
 });
