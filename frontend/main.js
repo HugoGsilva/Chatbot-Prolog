@@ -232,9 +232,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!response.ok) {
             updateStatus(false, 'Erro de conexão');
+            
             if (response.status === 429) {
-                throw new Error('Muitas requisições. Aguarde um momento.');
+                // Parse retry-after header se disponível
+                const retryAfter = response.headers.get('Retry-After');
+                const waitSeconds = retryAfter ? parseInt(retryAfter) : 60;
+                
+                throw {
+                    isRateLimit: true,
+                    waitSeconds: waitSeconds,
+                    message: `Limite de requisições atingido. Aguarde ${waitSeconds} segundos.`
+                };
             }
+            
             if (response.status === 422) {
                 const errorData = await response.json();
                 throw new Error('Mensagem inválida: ' + (errorData.detail?.[0]?.msg || 'erro de validação'));
@@ -379,6 +389,74 @@ document.addEventListener('DOMContentLoaded', () => {
         
         chatLog.appendChild(wrapper);
         scrollToBottom();
+    }
+
+    /**
+     * Renderiza aviso de rate limit com countdown.
+     */
+    function renderRateLimitWarning(waitSeconds) {
+        const wrapper = createMessageWrapper('bot');
+        const bubble = wrapper.querySelector('.message-bubble');
+        const messageText = wrapper.querySelector('.message-text');
+        
+        bubble.style.background = 'rgba(255, 140, 0, 0.15)';
+        bubble.style.border = '2px solid rgba(255, 140, 0, 0.5)';
+        
+        // Cria container para countdown
+        const countdownDiv = document.createElement('div');
+        countdownDiv.style.marginTop = '12px';
+        countdownDiv.style.padding = '12px';
+        countdownDiv.style.background = 'rgba(255, 140, 0, 0.1)';
+        countdownDiv.style.borderRadius = '8px';
+        countdownDiv.style.textAlign = 'center';
+        countdownDiv.style.fontWeight = '600';
+        countdownDiv.style.fontSize = '1.1rem';
+        countdownDiv.style.color = '#ff8c00';
+        
+        const textContent = `⏱️ **Limite de requisições atingido**\n\nVocê fez muitas requisições em pouco tempo. Por favor, aguarde antes de enviar uma nova mensagem.`;
+        
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+            const rawHtml = marked.parse(textContent);
+            const cleanHtml = DOMPurify.sanitize(rawHtml);
+            messageText.innerHTML = cleanHtml;
+        } else {
+            messageText.textContent = textContent;
+        }
+        
+        messageText.appendChild(countdownDiv);
+        chatLog.appendChild(wrapper);
+        scrollToBottom();
+        
+        // Desabilita input e botão
+        userInput.disabled = true;
+        sendButton.disabled = true;
+        
+        // Countdown
+        let remaining = waitSeconds;
+        
+        const updateCountdown = () => {
+            if (remaining > 0) {
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                const timeStr = minutes > 0 
+                    ? `${minutes}m ${seconds}s` 
+                    : `${seconds}s`;
+                countdownDiv.textContent = `⏳ Aguarde ${timeStr}`;
+                remaining--;
+                setTimeout(updateCountdown, 1000);
+            } else {
+                countdownDiv.textContent = '✅ Pronto! Você pode enviar mensagens novamente.';
+                countdownDiv.style.background = 'rgba(16, 124, 16, 0.1)';
+                countdownDiv.style.color = '#107c10';
+                
+                // Reabilita input e botão
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        };
+        
+        updateCountdown();
     }
 
     /**
@@ -667,6 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showLoadingIndicator();
         
+        let isRateLimited = false;
+        
         try {
             const response = await sendMessage(text);
             hideLoadingIndicator();
@@ -674,14 +754,25 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('[Error]', error);
             hideLoadingIndicator();
+            
+            // Verifica se é erro de rate limit
+            if (error.isRateLimit) {
+                isRateLimited = true;
+                renderRateLimitWarning(error.waitSeconds);
+                return; // Não reabilita input aqui, o countdown fará isso
+            }
+            
             renderErrorResponse(
                 error.message || 'Desculpe, ocorreu um erro ao processar sua mensagem.',
                 ['Tente novamente', 'Digite "ajuda" para ver comandos']
             );
         } finally {
-            userInput.disabled = false;
-            sendButton.disabled = false;
-            userInput.focus();
+            // Só reabilita se não for rate limit (que tem countdown próprio)
+            if (!isRateLimited) {
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
         }
     }
 

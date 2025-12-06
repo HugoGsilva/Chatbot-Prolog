@@ -54,7 +54,7 @@ class InfoHandlers(BaseHandler):
         return ChatResponse(
             type=ResponseType.TEXT,
             content="Olá! 👋 Sou o chatbot de filmes Netflix. Como posso ajudar? Digite 'ajuda' para ver o que posso fazer.",
-            suggestions=["ajuda", "filmes de ação", "filme aleatório"],
+            suggestions=[],
         )
     
     async def handle_identidade(
@@ -72,7 +72,7 @@ class InfoHandlers(BaseHandler):
             content="🤖 Olá! Eu sou o **Chatbot Netflix**, um assistente virtual especializado em filmes. "
                     "Fui criado para ajudar você a descobrir filmes por ator, gênero, diretor, "
                     "obter recomendações e muito mais! Digite 'ajuda' para ver tudo que posso fazer.",
-            suggestions=["ajuda", "filme aleatório", "filmes de ação"],
+            suggestions=[],
         )
     
     async def handle_despedida(
