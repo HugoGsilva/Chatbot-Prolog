@@ -91,21 +91,28 @@ class QueryHandlers(BaseHandler):
         # Tenta match com sugestões
         match_result = find_best_film_with_suggestions(filme)
         best_match = match_result["best_match"]
+        confidence = match_result.get("confidence", "none")
+        did_you_mean = match_result.get("did_you_mean")
         
         # Se não encontrou match válido, mostra sugestões
         if not best_match:
             suggestions_text = ""
             if match_result["suggestions"]:
                 top_3 = match_result["suggestions"][:3]
-                suggestions_list = [f"- {s['title']} (similaridade: {s['score']}%)" for s in top_3]
-                suggestions_text = "\n\nTalvez você quis dizer:\n" + "\n".join(suggestions_list)
+                suggestions_list = [f"- {s['title'].title()} (similaridade: {s['score']}%)" for s in top_3]
+                suggestions_text = "\n\n❓ Talvez você quis dizer:\n" + "\n".join(suggestions_list)
             
             return ChatResponse(
                 type=ResponseType.ERROR,
                 content=f"❌ Não encontrei o filme **'{filme}'** na base Netflix.{suggestions_text}",
                 suggestions=["filme aleatório", "filmes de ação"],
-                metadata={"rejected_reason": match_result["rejected_reason"]}
+                metadata={"rejected_reason": match_result["rejected_reason"], "confidence": confidence}
             )
+        
+        # Medium confidence: mostra confirmação "Did you mean?"
+        confirmation_msg = ""
+        if confidence == "medium" and did_you_mean:
+            confirmation_msg = f"\n\n💡 {did_you_mean}"
         
         # Consulta Prolog para buscar diretor
         try:
@@ -126,18 +133,23 @@ class QueryHandlers(BaseHandler):
         
         diretores = list(set([r["Diretor"] for r in results]))
         
+        # Formata resposta com diretor(es)
         if len(diretores) == 1:
+            content = f"🎬 O filme **{best_match.title()}** foi dirigido por **{diretores[0].title()}**.{confirmation_msg}"
             return ChatResponse(
                 type=ResponseType.TEXT,
-                content=f"🎬 O filme **{best_match}** foi dirigido por **{diretores[0]}**.",
-                suggestions=[f"filmes do diretor {diretores[0]}", "filme aleatório"],
+                content=content,
+                suggestions=[f"filmes do diretor {diretores[0].split()[0]}", "filme aleatório"],
+                metadata={"confidence": confidence}
             )
         else:
-            diretores_str = ", ".join(diretores)
+            diretores_str = ", ".join([d.title() for d in diretores])
+            content = f"🎬 O filme **{best_match.title()}** foi dirigido por: **{diretores_str}**.{confirmation_msg}"
             return ChatResponse(
                 type=ResponseType.TEXT,
-                content=f"🎬 O filme **{best_match}** foi dirigido por: **{diretores_str}**.",
+                content=content,
                 suggestions=["filme aleatório"],
+                metadata={"confidence": confidence}
             )
     
     async def handle_atores_do_filme(

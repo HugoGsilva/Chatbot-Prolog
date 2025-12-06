@@ -17,6 +17,8 @@
     % Nova funcionalidade: recomendação aleatória
     random_movie/1,
     random_movie_by_genre/2,
+    random_movie_enriched/4,
+    random_movie_by_genre_enriched/5,
     
     % Novas funcionalidades
     diretor_de_filme/2,
@@ -137,6 +139,28 @@ random_movie_by_genre(NomeGenero, TituloFilme) :-
     ),
     ListaDeFilmes \= [],
     random_member(TituloFilme, ListaDeFilmes).
+
+% random_movie_enriched(-TituloFilme, -Ano, -Generos, -Diretor)
+% Retorna filme aleatório com metadados completos (ano, gêneros, diretor)
+random_movie_enriched(TituloFilme, Ano, Generos, Diretor) :-
+    % Escolhe filme aleatório
+    random_movie(TituloFilme),
+    % Busca metadados do filme
+    imdb_kb:netflix_title(ShowID, TituloFilme, Ano, 'Movie'),
+    % Coleta todos os gêneros
+    findall(G, imdb_kb:netflix_genre(ShowID, G), Generos),
+    % Busca diretor (pode falhar se não houver)
+    (imdb_kb:netflix_director(ShowID, Diretor) -> true ; Diretor = 'Unknown').
+
+% random_movie_by_genre_enriched(+NomeGenero, -TituloFilme, -Ano, -Generos, -Diretor)
+% Retorna filme aleatório de um gênero com metadados completos
+random_movie_by_genre_enriched(NomeGenero, TituloFilme, Ano, Generos, Diretor) :-
+    % Escolhe filme aleatório do gênero
+    random_movie_by_genre(NomeGenero, TituloFilme),
+    % Busca metadados
+    imdb_kb:netflix_title(ShowID, TituloFilme, Ano, 'Movie'),
+    findall(G, imdb_kb:netflix_genre(ShowID, G), Generos),
+    (imdb_kb:netflix_director(ShowID, Diretor) -> true ; Diretor = 'Unknown').
 
 % diretor_de_filme(+TituloFilme, -Diretor)
 % Retorna o diretor de um filme específico.

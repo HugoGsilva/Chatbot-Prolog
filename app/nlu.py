@@ -384,13 +384,14 @@ def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Option
     Validações aplicadas:
     1. Match exato tem prioridade
     2. Fuzzy match com score mínimo
-    3. Validação de proporção de tamanho (evita "TITANIC" → "ATTACK ON TITAN")
-    4. Rejeita matches com diferença de tamanho > 60% e score < 85
+    3. Threshold dinâmico baseado no tamanho da query
+    4. Validação de proporção de tamanho (evita "TITANIC" → "ATTACK ON TITAN")
+    5. Rejeita matches com diferença de tamanho > 60% e score < 85
     
     Args:
         query: String de busca
         cache: Lista de strings para buscar
-        threshold: Score mínimo (padrão 75)
+        threshold: Score mínimo base (padrão 75, ajustado dinamicamente)
         
     Returns:
         Melhor match ou None se não passar nas validações
@@ -404,18 +405,23 @@ def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Option
     if query_upper in cache:
         return query_upper
     
-    # 2. Fuzzy matching
+    # 2. Threshold dinâmico: mais permissivo para queries curtas (nomes com typos)
+    dynamic_threshold = threshold
+    if len(query_upper) <= 10:
+        dynamic_threshold = max(70, threshold - 5)  # Permite mais typos em nomes curtos
+    
+    # 3. Fuzzy matching
     result = process.extractOne(query_upper, cache)
     if not result:
         return None
 
     matched_value, score = result[0], result[1]
     
-    # 3. Validação básica de score
-    if score < threshold:
+    # 4. Validação básica de score
+    if score < dynamic_threshold:
         return None
     
-    # 4. Validação de proporção de tamanho
+    # 5. Validação de proporção de tamanho
     # Previne matches como "TITANIC" (7) → "ATTACK ON TITAN" (15)
     len_query = len(query_upper)
     len_match = len(matched_value)

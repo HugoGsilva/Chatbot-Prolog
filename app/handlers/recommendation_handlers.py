@@ -20,9 +20,10 @@ class RecommendationHandlers(BaseHandler):
         entities: Dict[str, str], 
         session_id: str
     ) -> ChatResponse:
-        """Handler para intenção 'filme_aleatorio'."""
+        """Handler enriquecido para intenção 'filme_aleatorio' com metadados completos."""
         try:
-            query_string = "imdb_rules:random_movie(TituloFilme)"
+            # Usa regra enriquecida que retorna título, ano, gêneros e diretor
+            query_string = "imdb_rules:random_movie_enriched(Titulo, Ano, Generos, Diretor)"
             results = await self._query_prolog(query_string)
         except PrologTimeoutError:
             return self._create_timeout_response()
@@ -33,12 +34,37 @@ class RecommendationHandlers(BaseHandler):
                 content="Não foi possível encontrar um filme aleatório.",
             )
         
-        titulo = results[0]["TituloFilme"]
+        filme = results[0]
+        titulo = filme["Titulo"]
+        ano = filme["Ano"]
+        generos = filme["Generos"]
+        diretor = filme["Diretor"]
+        
+        # Formata gêneros (pega top 2 para não poluir)
+        generos_texto = ", ".join(generos[:2]) if generos else "N/A"
+        
+        # Formata diretor (capitaliza para melhor apresentação)
+        diretor_texto = diretor.title() if diretor and diretor != "Unknown" else "Diretor não disponível"
+        
+        # Monta resposta enriquecida
+        content = (
+            f"🎬 **{titulo}** ({ano})\n\n"
+            f"📁 **Gênero:** {generos_texto}\n"
+            f"🎭 **Diretor:** {diretor_texto}"
+        )
+        
+        # Sugestões contextuais
+        suggestions = ["outro filme aleatório"]
+        if generos:
+            suggestions.insert(0, f"filmes de {generos[0]}")
+        if diretor and diretor != "Unknown":
+            suggestions.append(f"filmes do diretor {diretor.split()[0]}")
         
         return ChatResponse(
             type=ResponseType.TEXT,
-            content=f"🎬 Que tal assistir: **{titulo}**?",
-            suggestions=[f"gênero de {titulo}", "outro filme aleatório"],
+            content=content,
+            suggestions=suggestions,
+            metadata={"titulo": titulo, "ano": ano, "generos": generos, "diretor": diretor}
         )
     
     async def handle_recomendar_filme(
@@ -60,15 +86,34 @@ class RecommendationHandlers(BaseHandler):
             if best_genre:
                 try:
                     genre_query = best_genre.upper()
-                    query_string = f"imdb_rules:random_movie_by_genre('{genre_query}', TituloFilme)"
+                    # Usa versão enriquecida para gênero específico
+                    query_string = f"imdb_rules:random_movie_by_genre_enriched('{genre_query}', Titulo, Ano, Generos, Diretor)"
                     results = await self._query_prolog(query_string)
                     
                     if results:
-                        titulo = results[0]["TituloFilme"]
+                        filme = results[0]
+                        titulo = filme["Titulo"]
+                        ano = filme["Ano"]
+                        generos = filme["Generos"]
+                        diretor = filme["Diretor"]
+                        
+                        generos_texto = ", ".join(generos[:2]) if generos else best_genre
+                        diretor_texto = diretor.title() if diretor and diretor != "Unknown" else "Diretor não disponível"
+                        
+                        content = (
+                            f"🎬 **{titulo}** ({ano})\n\n"
+                            f"📁 **Gênero:** {generos_texto}\n"
+                            f"🎭 **Diretor:** {diretor_texto}"
+                        )
+                        
+                        suggestions = [f"outro filme de {best_genre}", "filme aleatório"]
+                        if diretor and diretor != "Unknown":
+                            suggestions.insert(1, f"filmes do diretor {diretor.split()[0]}")
+                        
                         return ChatResponse(
                             type=ResponseType.TEXT,
-                            content=f"🎬 Para {best_genre}, recomendo: **{titulo}**!",
-                            suggestions=[f"gênero de {titulo}", f"outro filme de {best_genre}", "filme aleatório"],
+                            content=content,
+                            suggestions=suggestions,
                         )
                 except PrologTimeoutError:
                     return self._create_timeout_response()
