@@ -156,7 +156,7 @@ class NLUEngine:
                         )
         
         # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme, small_talk)
-        keyword_match_intents = ["filme_aleatorio", "recomendar_filme", "small_talk", "diretor_do_filme"]
+        keyword_match_intents = ["filme_aleatorio", "recomendar_filme", "small_talk", "diretor_do_filme", "atores_do_filme"]
         for intent_name in keyword_match_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]
@@ -165,11 +165,12 @@ class NLUEngine:
                     if keyword in original_lower or keyword_normalized in original_normalized:
                         entities = {}
                         
-                        # Para diretor_do_filme, extrair entidade filme
-                        if intent_name == "diretor_do_filme":
+                        # Para diretor_do_filme e atores_do_filme, extrair entidade filme
+                        if intent_name in ["diretor_do_filme", "atores_do_filme"]:
                             # Primeiro tenta com preposições
                             found = False
-                            for prep in ["de ", "do ", "da "]:
+                            preps = ["de ", "do ", "da ", "em ", "no ", "na "]
+                            for prep in preps:
                                 if prep in original_lower:
                                     idx = original_lower.rfind(prep)
                                     filme_candidate = original_text[idx + len(prep):].strip().rstrip("?")
@@ -178,9 +179,10 @@ class NLUEngine:
                                         found = True
                                     break
                             
-                            # Se não encontrou, tenta extrair após "dirigiu" ou similar
+                            # Se não encontrou, tenta extrair após "dirigiu", "atuou" ou similar
                             if not found:
-                                for verb in ["dirigiu ", "fez ", "criou "]:
+                                verbs = ["dirigiu ", "fez ", "criou ", "atuou ", "atua "]
+                                for verb in verbs:
                                     if verb in original_lower:
                                         idx = original_lower.find(verb)
                                         filme_candidate = original_text[idx + len(verb):].strip().rstrip("?")
@@ -339,7 +341,7 @@ class NLUEngine:
         
         # ===== VERIFICAÇÃO PRIORITÁRIA: Intents simples (ajuda, saudacao) =====
         # Estas intents têm precedência quando há match exato das keywords
-        priority_intents = ["ajuda", "saudacao"]
+        priority_intents = ["ajuda", "saudacao", "atores_do_filme", "diretor_do_filme"]
         for intent_name in priority_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]

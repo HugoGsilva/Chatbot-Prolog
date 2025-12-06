@@ -67,6 +67,7 @@ class IntentRouter:
             # Query handlers
             "genero_do_filme": self.query_handlers.handle_genero_do_filme,
             "diretor_do_filme": self.query_handlers.handle_diretor_do_filme,
+            "atores_do_filme": self.query_handlers.handle_atores_do_filme,
             
             # Recommendation handlers
             "filme_aleatorio": self.recommendation_handlers.handle_filme_aleatorio,

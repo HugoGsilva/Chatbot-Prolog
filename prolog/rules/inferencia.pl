@@ -7,6 +7,7 @@
     filmes_por_diretor/2,
     filmes_por_genero/2,
     genero_do_filme/2,
+    contar_filmes_por_genero/2,
     contar_filmes_por_genero_e_ano/3,
 
     % As novas regras de recomendação (o seu pedido)
@@ -19,7 +20,8 @@
     
     % Novas funcionalidades
     diretor_de_filme/2,
-    filmes_por_ano/2
+    filmes_por_ano/2,
+    atores_do_filme/2
 
     % (As regras 'get_all_...' já não são necessárias aqui,
     % pois o pipeline ETL (Fase 1) trata disso)
@@ -54,6 +56,19 @@ genero_do_filme(TituloFilmeRaw, NomeGenero) :-
     upcase_atom(TituloOriginal, UpperFact),
     UpperParam = UpperFact,
     imdb_kb:netflix_genre(ShowID, NomeGenero).
+
+% contar_filmes_por_genero(+NomeGenero, -Contagem)
+% Conta todos os filmes de um gênero específico.
+contar_filmes_por_genero(NomeGenero, Contagem) :-
+    findall(
+        T,
+        (
+            imdb_kb:netflix_genre(ShowID, NomeGenero),
+            imdb_kb:netflix_title(ShowID, T, _)
+        ),
+        Titulos
+    ),
+    length(Titulos, Contagem).
 
 % contar_filmes_por_genero_e_ano(+NomeGenero, +Ano, -Contagem)
 contar_filmes_por_genero_e_ano(NomeGenero, Ano, Contagem) :-
@@ -128,5 +143,16 @@ diretor_de_filme(TituloFilmeRaw, Diretor) :-
 
 % filmes_por_ano(+Ano, -TituloFilme)
 % Retorna filmes lançados em um ano específico.
+filmes_por_ano(Ano, TituloFilme) :-
+    imdb_kb:netflix_title(_, TituloFilme, Ano).
+
+% atores_do_filme(+TituloFilme, -Ator)
+% Retorna os atores de um filme específico.
+atores_do_filme(TituloFilmeRaw, Ator) :-
+    upcase_atom(TituloFilmeRaw, UpperParam),
+    imdb_kb:netflix_title(ShowID, TituloOriginal, _),
+    upcase_atom(TituloOriginal, UpperFact),
+    UpperParam = UpperFact,
+    imdb_kb:netflix_actor(ShowID, Ator).
 filmes_por_ano(Ano, TituloFilme) :-
     imdb_kb:netflix_title(_, TituloFilme, Ano).

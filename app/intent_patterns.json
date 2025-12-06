@@ -67,6 +67,31 @@
             "quem fez Inception?"
         ]
     },
+    "atores_do_filme": {
+        "keywords": [
+            "quem atuou",
+            "quem atua",
+            "elenco de",
+            "elenco do",
+            "atores de",
+            "atores do",
+            "quem está em",
+            "quem participa"
+        ],
+        "prepositions": [
+            "de",
+            "do",
+            "da",
+            "em",
+            "no"
+        ],
+        "entity_type": "MOVIE",
+        "examples": [
+            "quem atuou em Titanic?",
+            "elenco de Matrix",
+            "atores do Inception"
+        ]
+    },
     "filmes_por_ano": {
         "keywords": [
             "lançados",
