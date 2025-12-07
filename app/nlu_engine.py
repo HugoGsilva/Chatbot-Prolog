@@ -354,6 +354,12 @@ class NLUEngine:
                                         break
 
                             if ator_candidate:
+                                # [FIX] Validação contra Gênero:
+                                # Se "filmes de [X]" foi pego como Ator, mas X é um gênero, aborta este intent
+                                # para deixar cair no filmes_por_genero.
+                                if is_valid_genre(ator_candidate):
+                                    continue
+                                    
                                 entities["ator"] = ator_candidate
                         
                         # Para filmes_por_genero, extrair gênero
