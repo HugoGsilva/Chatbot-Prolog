@@ -35,7 +35,7 @@
                 <span class="card-title">{{ section.title }}</span>
               </div>
               <div class="help-chips">
-                <button class="help-chip" type="button" *ngFor="let example of section.examples" (click)="copyToClipboard(example)">
+                <button class="help-chip" type="button" *ngFor="let example of section.examples" (click)="onExampleSelect(example)">
                   {{ example }}
                 </button>
               </div>

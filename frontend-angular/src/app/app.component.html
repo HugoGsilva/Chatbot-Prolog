@@ -11,7 +11,8 @@
   
   <app-message-list 
     [messages]="messages"
-    [isTyping]="isTyping">
+    [isTyping]="isTyping"
+    (exampleClick)="onSendMessage($event)">
   </app-message-list>
   
   <app-input-area 

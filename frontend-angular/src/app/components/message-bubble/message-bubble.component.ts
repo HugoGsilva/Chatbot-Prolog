@@ -1,4 +1,4 @@
-import { Component, HostBinding, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, HostBinding, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Message } from '../../models/chat.model';
@@ -14,6 +14,7 @@ import DOMPurify from 'dompurify';
 })
 export class MessageBubbleComponent implements OnInit {
   @Input() message!: Message;
+  @Output() exampleClick = new EventEmitter<string>();
   @HostBinding('class.user-host') get isUserHost(): boolean { return !this.message?.isBot; }
   @HostBinding('class.bot-host') get isBotHost(): boolean { return !!this.message?.isBot; }
   renderedContent: SafeHtml = '';
@@ -184,5 +185,10 @@ export class MessageBubbleComponent implements OnInit {
       return;
     }
     navigator.clipboard?.writeText(text).catch((err) => console.error('Erro ao copiar:', err));
+  }
+
+  onExampleSelect(text: string): void {
+    this.copyToClipboard(text);
+    this.exampleClick.emit(text);
   }
 }

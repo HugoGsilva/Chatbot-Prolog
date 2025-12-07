@@ -10,7 +10,7 @@
         {{ message.isBot ? '🤖' : '👤' }}
       </div>
       
-      <app-message-bubble [message]="message"></app-message-bubble>
+      <app-message-bubble [message]="message" (exampleClick)="onExampleClick($event)"></app-message-bubble>
     </div>
   </div>
   

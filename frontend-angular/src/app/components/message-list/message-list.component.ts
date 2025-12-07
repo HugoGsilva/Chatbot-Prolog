@@ -1,4 +1,4 @@
-import { Component, Input, AfterViewChecked, ElementRef, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, AfterViewChecked, ElementRef, ViewChild, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Message } from '../../models/chat.model';
 import { MessageBubbleComponent } from '../message-bubble/message-bubble.component';
@@ -13,6 +13,7 @@ import { MessageBubbleComponent } from '../message-bubble/message-bubble.compone
 export class MessageListComponent implements AfterViewChecked, OnChanges {
   @Input() messages: Message[] = [];
   @Input() isTyping = false;
+  @Output() exampleClick = new EventEmitter<string>();
   @ViewChild('chatLog') chatLog?: ElementRef;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -28,6 +29,10 @@ export class MessageListComponent implements AfterViewChecked, OnChanges {
 
   trackByMessageId(index: number, message: Message): string {
     return message.id;
+  }
+
+  onExampleClick(text: string): void {
+    this.exampleClick.emit(text);
   }
 
   private scrollToBottom(): void {
