@@ -20,6 +20,48 @@
   flex-wrap: wrap;
 }
 
+@media (max-width: 900px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .help-btn,
+  .clear-btn {
+    width: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-title {
+    gap: var(--spacing-sm);
+  }
+
+  .help-btn,
+  .clear-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .theme-toggle-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .header-actions {
   display: flex;
   align-items: center;

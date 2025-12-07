@@ -15,6 +15,37 @@
   scrollbar-color: var(--accent-secondary) transparent;
 }
 
+@media (max-width: 900px) {
+  .chat-window {
+    padding: var(--spacing-md);
+  }
+
+  .chat-log {
+    max-width: 100%;
+    padding: 0 var(--spacing-sm);
+    gap: var(--spacing-md);
+  }
+}
+
+@media (max-width: 600px) {
+  .chat-window {
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .chat-log {
+    gap: var(--spacing-sm);
+  }
+
+  .message-wrapper {
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 /* Barra de rolagem para Chrome, Edge, Safari */
 .chat-window::-webkit-scrollbar {
   width: 12px;

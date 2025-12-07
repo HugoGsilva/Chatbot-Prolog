@@ -21,6 +21,37 @@
   min-width: 160px;
 }
 
+@media (max-width: 900px) {
+  .message-content {
+    max-width: 85%;
+  }
+}
+
+@media (max-width: 600px) {
+  .message-content {
+    max-width: 100%;
+    flex: 1 1 100%;
+    min-width: 140px;
+  }
+
+  .message-bubble {
+    padding: 12px 14px;
+  }
+
+  .help-hero,
+  .help-card {
+    padding: 12px;
+  }
+
+  .help-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .help-chip {
+    font-size: 0.8rem;
+  }
+}
+
 .message-bubble {
   padding: 14px 18px;
   border-radius: var(--radius-md);
