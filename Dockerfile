@@ -59,6 +59,7 @@ RUN apt-get update && \
 # Copia código da aplicação backend e Prolog
 COPY app/ ./app/
 COPY prolog/ ./prolog/
+COPY data_netflix/ ./data_netflix/
 
 # Copia build do frontend para o diretório padrão do Nginx
 COPY --from=frontend-builder /frontend/dist/netflix-prolog-chatbot /usr/share/nginx/html

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - network_swarm_public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  chatbot:
+    image: hugogsilva/chatbot-app:latest
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Configurações do Redis
+      - REDIS_URL=redis://redis:6379/0
+      # Configurações de NLU
+      - USE_SEMANTIC_NLU=True 
+    networks:
+      - network_swarm_public
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+      labels:
+        # Traefik configuration for VPS
+        - traefik.enable=true
+        - traefik.http.routers.chatbot.rule=Host(`chat.hugogsilva.dev`)
+        - traefik.http.routers.chatbot.entrypoints=websecure
+        - traefik.http.routers.chatbot.priority=1
+        - traefik.http.routers.chatbot.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatbot.service=chatbot
+        # APONTANDO PARA A PORTA 80 (NGINX/FRONTEND)
+        - traefik.http.services.chatbot.loadbalancer.server.port=80
+
+networks:
+  network_swarm_public:
+    external: true
+
+volumes:
+  # Mantendo apenas se necessário futuramente, mas removido uso explícito acima
+  mysql_data:
+    external: true
+  prolog_knowledge:
+    external: true
