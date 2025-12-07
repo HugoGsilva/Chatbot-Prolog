@@ -28,6 +28,7 @@ export class AppComponent {
   latency = 0;
   isTyping = false;
   showHelpMenu = false;
+  private lastUserText = '';
 
   constructor(
     private chatService: ChatService,
@@ -71,10 +72,12 @@ export class AppComponent {
   }
 
   onSendMessage(text: string): void {
+    const trimmed = text.trim();
+    this.lastUserText = trimmed;
     // Adicionar mensagem do usuário
     const userMessage: Message = {
       id: this.generateMessageId(),
-      text,
+      text: trimmed,
       isBot: false,
       timestamp: new Date()
     };
@@ -85,10 +88,26 @@ export class AppComponent {
 
     // Enviar para API
     const sessionId = this.sessionService.getCurrentSessionId();
-    this.chatService.sendMessage(text, sessionId).subscribe({
+    this.chatService.sendMessage(trimmed, sessionId).subscribe({
       next: ({ response, latency }) => {
         this.latency = latency;
         this.isTyping = false;
+
+        // Se vier um help inesperado, adicionar mensagem de fallback antes do guia
+        if (response?.type === 'help' && !this.isHelpRequest(trimmed)) {
+          const fallbackMessage: Message = {
+            id: this.generateMessageId(),
+            text: '',
+            isBot: true,
+            timestamp: new Date(),
+            response: {
+              type: 'text' as any,
+              content: 'Não consegui interpretar sua solicitação. Veja abaixo o que posso fazer:'
+            }
+          };
+          this.messages.push(fallbackMessage);
+        }
+
         const botMessage: Message = {
           id: this.generateMessageId(),
           text: '',
@@ -103,6 +122,11 @@ export class AppComponent {
         console.error('Error sending message:', error);
       }
     });
+  }
+
+  private isHelpRequest(text: string): boolean {
+    const t = (text || '').toLowerCase();
+    return t === 'ajuda' || t.includes('como usar') || t === 'help';
   }
 
   onClearChat(): void {
