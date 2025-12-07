@@ -8,7 +8,7 @@ from typing import Dict
 
 from .base_handler import BaseHandler
 from ..schemas import ChatResponse, ResponseType
-from ..nlu import find_best_genre
+from ..nlu import find_best_genre, find_best_actor
 from ..prolog_service import PrologTimeoutError
 
 
@@ -173,9 +173,49 @@ class FilterHandlers(BaseHandler):
         session_id: str
     ) -> ChatResponse:
         """Handler para intenção 'filmes_com_filtros' - consultas complexas."""
-        # TODO: Implementar lógica para múltiplos filtros
+        ator = entities.get("ator", "")
+        genero = entities.get("genero", "")
+        
+        # Caso 1: Ator e Gênero (Ex: "filmes do Adam Sandler de comédia")
+        if ator and genero:
+            # Normaliza entidades
+            best_actor = find_best_actor(ator)
+            best_genre = find_best_genre(genero)
+            
+            if not best_actor or not best_genre:
+                return ChatResponse(
+                    type=ResponseType.ERROR,
+                    content=f"Não consegui identificar corretamente o ator '{ator}' ou gênero '{genero}'.",
+                    suggestions=["filmes de ação", "filmes do Tom Hanks"],
+                )
+            
+            # Consulta Prolog com timeout
+            try:
+                actor_query = best_actor.upper()
+                query_string = f"imdb_rules:recomendar_por_ator_e_genero('{actor_query}', '{best_genre}', TituloFilme)"
+                results = await self._query_prolog(query_string)
+            except PrologTimeoutError:
+                return self._create_timeout_response()
+            
+            if not results:
+                return ChatResponse(
+                    type=ResponseType.TEXT,
+                    content=f"Não encontrei filmes de {best_genre} com {best_actor}.",
+                    suggestions=["filme aleatório", f"filmes de {best_genre}"],
+                )
+            
+            filmes = [{"titulo": r["TituloFilme"]} for r in results]
+            
+            return ChatResponse(
+                type=ResponseType.LIST,
+                content=filmes,
+                suggestions=[f"outros filmes de {best_actor}", f"outros filmes de {best_genre}"],
+                metadata={"total": len(filmes), "filtros": ["ator", "genero"]}
+            )
+            
+        # Caso não tenha filtros suficientes ou suportados
         return ChatResponse(
             type=ResponseType.TEXT,
-            content="Funcionalidade de filtros múltiplos ainda não implementada.",
-            suggestions=["filmes de ação", "filmes do Tom Hanks"],
+            content="Por enquanto só suporto filtrar por **Ator + Gênero** (ex: 'filmes do Adam Sandler de comédia').",
+            suggestions=["filmes com Adam Sandler e comédia", "filmes de ação"],
         )

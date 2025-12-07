@@ -184,6 +184,7 @@ class NLUEngine:
             "diretor_do_filme",
             "atores_do_filme",
             "genero_do_filme",
+            "filmes_com_filtros",  # ⬆️ Prioridade MÁXIMA para queries complexas
             "filmes_por_ator",  # ⬆️ Prioridade ANTES de filmes_por_diretor
             "filmes_por_genero",  # ⬆️ Prioridade ANTES de filmes_por_diretor
             "filmes_por_diretor",
@@ -231,6 +232,61 @@ class NLUEngine:
                             if filme_candidate:
                                 entities["filme"] = filme_candidate
 
+                        # Logica para filmes com filtros (Ex: filmes com [ator] e de [genero])
+                        if intent_name == "filmes_com_filtros":
+                            # Tenta extrair Ator E Gênero
+                            # Padrão esperado: "com [Ator] ... de [Gênero]" ou "de [Gênero] ... com [Ator]"
+                            
+                            # 1. Busca Ator ("com ...")
+                            ator_candidate = None
+                            genero_candidate = None
+                            
+                            if " com " in original_lower:
+                                idx_com = original_lower.find(" com ")
+                                # Busca onde termina (pode ser no fim ou antes de " e " ou " de ")
+                                end_idx = len(original_lower)
+                                for sep in [" e ", " de ", " do "]:
+                                    sep_idx = original_lower.find(sep, idx_com + 5)
+                                    if sep_idx != -1 and sep_idx < end_idx:
+                                        end_idx = sep_idx
+                                
+                                ator_candidate = original_text[idx_com + 5:end_idx].strip()
+                            
+                            # 2. Busca Gênero ("de ...", "do ...")
+                            # Cuidado para não pegar "do diretor" se fosse o caso, mas aqui é filtro de genero
+                            # Procura " de " ou " do " que NÃO seja parte de "filmes de" no inicio
+                            
+                            # Simplificação: procura "de"/"do" após o ator ou independentemente
+                            search_start = 0
+                            if ator_candidate:
+                                search_start = original_lower.find(ator_candidate.lower()) + len(ator_candidate)
+                            
+                            separators = [" de ", " do ", " da "]
+                            for sep in separators:
+                                sep_idx = original_lower.find(sep, search_start)
+                                if sep_idx != -1:
+                                    # Extrai até o fim ou até próximo separador
+                                    end_gen = len(original_lower)
+                                    for stop in [" com ", " e "]:
+                                        stop_idx = original_lower.find(stop, sep_idx + len(sep))
+                                        if stop_idx != -1 and stop_idx < end_gen:
+                                            end_gen = stop_idx
+                                    
+                                    cand = original_text[sep_idx + len(sep):end_gen].strip()
+                                    if cand and cand.lower() not in ["filme", "filmes"]:
+                                        genero_candidate = cand
+                                    break
+                                    
+                            if ator_candidate:
+                                entities["ator"] = ator_candidate
+                            if genero_candidate:
+                                entities["genero"] = genero_candidate
+                                
+                            # Só retorna se achou pelo menos um filtro válido
+                            if not entities:
+                                continue  # Deixa cair no fallback se não achou nada
+
+
                         if intent_name == "filmes_por_diretor":
                             director_candidate = None
 
@@ -245,6 +301,7 @@ class NLUEngine:
                                 prefixes = [
                                     "do diretor ", "da diretora ", "do direitor ", "da direitora ",
                                     "do ", "da ", "por ", "pelo ", "pela ", "de ", "dirigido por ",
+                                    "diretor ", "diretora ",  # Adicionado para limpar "diretor Spielberg"
                                 ]
                                 for pref in prefixes:
                                     if after_keyword.lower().startswith(pref):

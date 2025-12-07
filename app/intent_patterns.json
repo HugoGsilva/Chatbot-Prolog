@@ -238,30 +238,11 @@
     },
     "filmes_por_diretor": {
         "keywords": [
-            "filmes",
-            "filme",
-            "movies"
-        ],
-        "prepositions": [
-            "de",
-            "do",
-            "da"
-        ],
-        "entity_type": "GENRE",
-        "examples": [
-            "filmes de ação",
-            "filmes do gênero drama",
-            "filme terror"
-        ]
-    },
-    "filmes_por_diretor": {
-        "keywords": [
-            "filmes",
-            "filme",
-            "obras",
+            "obras do diretor",
+            "filmes do diretor",
             "diretor",
             "diretora",
-            "direção"
+            "dirigido por"
         ],
         "prepositions": [
             "por",
@@ -352,8 +333,10 @@
     },
     "filmes_com_filtros": {
         "keywords": [
-            "filmes",
-            "filme"
+            "filmes que",
+            "filme que",
+            "filmes com",
+            "filme com"
         ],
         "prepositions": [
             "com",
