@@ -26,10 +26,10 @@ class InfoHandlers(BaseHandler):
         help_content = {
             "message": "👋 Olá! Sou o chatbot de filmes Netflix. Posso ajudar você a:",
             "examples": {
-                "Buscar por ator": ["filmes do Tom Hanks", "filmes com Adam Sandler"],
+                "Buscar por ator": ["filmes com Adam Sandler", "filmes com Denzel Washington"],
                 "Buscar por gênero": ["filmes de ação", "filmes de comédia"],
-                "Buscar por diretor": ["filmes do Steven Spielberg", "filmes de Christopher Nolan"],
-                "Descobrir gênero": ["gênero de Inception", "qual o tipo de Matrix"],
+                "Buscar por diretor": ["filmes do Diretor Quentin Tarantino", "filmes do Diretor Steven Spielberg"],
+                "Descobrir gênero": ["gênero de Jaws", "qual o tipo de Grown Ups"],
                 "Recomendações": ["recomende um filme de terror", "sugira um drama"],
                 "Filme aleatório": ["filme aleatório", "me surpreenda"]
             }

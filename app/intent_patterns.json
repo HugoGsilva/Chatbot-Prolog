@@ -62,9 +62,9 @@
         ],
         "entity_type": "MOVIE",
         "examples": [
-            "quem dirigiu Titanic?",
-            "diretor de Matrix",
-            "quem fez Inception?"
+            "quem dirigiu Jaws?",
+            "diretor de Grown Ups",
+            "quem fez Training Day?"
         ]
     },
     "atores_do_filme": {
@@ -87,9 +87,9 @@
         ],
         "entity_type": "MOVIE",
         "examples": [
-            "quem atuou em Titanic?",
-            "elenco de Matrix",
-            "atores do Inception"
+            "quem atuou em Grown Ups?",
+            "elenco de Training Day",
+            "atores de Jaws"
         ]
     },
     "filmes_por_ano": {
@@ -195,9 +195,9 @@
         ],
         "entity_type": "PERSON",
         "examples": [
-            "filmes por tom hanks",
-            "filmes do penélope cruz",
-            "filme com brad pitt"
+            "filmes com adam sandler",
+            "filmes com denzel washington",
+            "filme com melissa mccarthy"
         ]
     },
     "filmes_por_genero": {
@@ -233,8 +233,8 @@
         ],
         "entity_type": "PERSON",
         "examples": [
-            "filmes por spielberg",
-            "filmes dirigidos por nolan"
+            "filmes por steven spielberg",
+            "filmes dirigidos por mike flanagan"
         ]
     },
     "genero_do_filme": {
@@ -251,8 +251,8 @@
         ],
         "entity_type": "MOVIE",
         "examples": [
-            "gênero de inception",
-            "qual gênero do filme matrix"
+            "gênero de jaws",
+            "qual gênero do filme training day"
         ]
     },
     "recomendar_filme": {
@@ -323,8 +323,8 @@
         "entity_type": "MIXED",
         "multiple_entities": true,
         "examples": [
-            "filmes com tom hanks de drama",
-            "filmes de ação com explosões"
+            "filmes com adam sandler de comédia",
+            "filmes de ação com denzel washington"
         ]
     }
 }
