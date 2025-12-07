@@ -193,3 +193,114 @@
   background: rgba(0, 183, 255, 0.9);
   transform: translateY(-1px);
 }
+
+.help-response {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.help-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(120deg, rgba(0, 183, 255, 0.18), rgba(68, 105, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.help-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #1b2430;
+  color: var(--accent-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 8px 18px rgba(0, 183, 255, 0.25);
+}
+
+.help-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.help-title {
+  margin: 4px 0 2px;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.help-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.help-card {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: #111823;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.help-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(0, 183, 255, 0.15);
+}
+
+.card-title {
+  font-size: 0.95rem;
+}
+
+.help-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.help-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 183, 255, 0.12);
+  border: 1px solid rgba(0, 183, 255, 0.35);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.help-chip:hover {
+  background: var(--accent-primary);
+  color: #0b1017;
+  box-shadow: 0 10px 20px rgba(0, 183, 255, 0.35);
+  transform: translateY(-1px);
+}

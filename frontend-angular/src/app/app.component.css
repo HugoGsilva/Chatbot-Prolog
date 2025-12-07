@@ -27,8 +27,8 @@
   width: 380px;
   max-width: 90vw;
   height: 100vh;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f9fc 100%);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  background: #0f141b;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
   animation: slideInRight 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -49,7 +49,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  background: #0f1823;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .help-header h2 {
@@ -62,11 +63,11 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: none;
-  background: var(--chat-window-bg);
-  font-size: 24px;
+  border: 1px solid var(--border-color);
+  background: #121a26;
+  font-size: 20px;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -74,7 +75,9 @@
 }
 
 .close-btn:hover {
-  background: var(--border-color);
+  background: #161f2b;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
   transform: rotate(90deg);
 }
 
@@ -82,7 +85,7 @@
   flex: 1;
   padding: 16px;
   overflow-y: auto;
-  background: var(--container-bg);
+  background: #0f141b;
 }
 
 .help-option {
@@ -91,24 +94,19 @@
   gap: 16px;
   padding: 16px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(25, 118, 210, 0.1);
+  background: #111823;
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .help-option:hover {
-  border-color: rgba(25, 118, 210, 0.25);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent-primary);
+  background: #161f2b;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
   transform: translateY(-2px);
-}
-
-.help-option:hover {
-  background: var(--border-color);
-  transform: translateX(-4px);
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .help-icon {
@@ -118,8 +116,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--container-bg);
+  background: #1b2430;
   border-radius: 12px;
+  color: var(--accent-primary);
 }
 
 .help-text {

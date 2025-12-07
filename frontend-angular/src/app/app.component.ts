@@ -127,9 +127,9 @@ export class AppComponent {
 
   onHelpOption(option: string): void {
     this.closeHelpMenu();
-    
-    const devFeatures = ['top_rated', 'suggestions'];
-    
+
+    const devFeatures = ['top_rated'];
+
     if (devFeatures.includes(option)) {
       const devMessage: Message = {
         id: this.generateMessageId(),
@@ -144,12 +144,16 @@ export class AppComponent {
         }
       };
       this.messages.push(devMessage);
-    } else {
-      const queries: { [key: string]: string } = {
-        'como_usar': 'ajuda',
-        'recent': 'filmes de 2024'
-      };
-      this.onSendMessage(queries[option]);
+      return;
+    }
+
+    const queries: { [key: string]: string } = {
+      'como_usar': 'ajuda'
+    };
+
+    const query = queries[option];
+    if (query) {
+      this.onSendMessage(query);
     }
   }
 

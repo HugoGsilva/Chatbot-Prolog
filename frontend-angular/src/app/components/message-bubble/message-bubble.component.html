@@ -1,6 +1,6 @@
 <div class="message-content">
   <div class="message-bubble" [class.bot-bubble]="message.isBot" [class.user-bubble]="!message.isBot">
-    <ng-container *ngIf="isListResponse(); else markdownBlock">
+    <ng-container *ngIf="isListResponse(); else nonListContent">
       <div class="list-response">
         <p class="list-heading">Mostrando {{ displayCount }} de {{ listItems.length }} filmes</p>
         <div class="list-item" *ngFor="let item of visibleListItems">
@@ -16,8 +16,36 @@
         </button>
       </div>
     </ng-container>
-    <ng-template #markdownBlock>
-      <div class="message-text" [innerHTML]="renderedContent"></div>
+    <ng-template #nonListContent>
+      <ng-container *ngIf="isHelpResponse(); else markdownBlock">
+        <div class="help-response">
+          <div class="help-hero">
+            <div class="help-icon-badge">💡</div>
+            <div>
+              <p class="help-eyebrow">Guia rápido</p>
+              <p class="help-title">{{ helpContent?.title }}</p>
+              <p class="help-subtitle">{{ helpContent?.intro }}</p>
+            </div>
+          </div>
+
+          <div class="help-grid">
+            <div class="help-card" *ngFor="let section of helpContent?.sections">
+              <div class="help-card-header">
+                <span class="card-dot"></span>
+                <span class="card-title">{{ section.title }}</span>
+              </div>
+              <div class="help-chips">
+                <button class="help-chip" type="button" *ngFor="let example of section.examples" (click)="copyToClipboard(example)">
+                  {{ example }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+      <ng-template #markdownBlock>
+        <div class="message-text" [innerHTML]="renderedContent"></div>
+      </ng-template>
     </ng-template>
     
     <button 

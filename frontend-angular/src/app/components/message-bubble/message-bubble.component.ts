@@ -17,6 +17,7 @@ export class MessageBubbleComponent implements OnInit {
   renderedContent: SafeHtml = '';
   listItems: any[] = [];
   visibleListCount = 3;
+  helpContent: { title: string; intro: string; sections: { title: string; examples: string[] }[] } | null = null;
 
   constructor(private sanitizer: DomSanitizer) {}
 
@@ -27,6 +28,11 @@ export class MessageBubbleComponent implements OnInit {
   async renderContent(): Promise<void> {
     const rawContent = this.message.response?.content || this.message.text || '';
     const responseType = this.message.response?.type;
+
+    // Reset derived state before rendering the new payload
+    this.helpContent = null;
+    this.listItems = [];
+    this.visibleListCount = 3;
     
     if (!rawContent) {
       console.warn('Empty content for message:', this.message);
@@ -40,9 +46,13 @@ export class MessageBubbleComponent implements OnInit {
         
         // Converter diferentes tipos de conteúdo em string
         if (responseType === 'help') {
-          // Conteúdo de ajuda é um objeto
-          const helpContent = rawContent as any;
-          textContent = this.formatHelpContent(helpContent);
+          // Renderizar ajuda com layout próprio quando o conteúdo é um objeto válido
+          if (typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent)) {
+            this.helpContent = this.buildHelpContent(rawContent);
+            this.renderedContent = '';
+            return;
+          }
+          textContent = this.formatHelpContent(rawContent);
         } else if (responseType === 'list') {
           // Conteúdo de lista é um array de objetos
           const listContent = (rawContent as any[]) || [];
@@ -81,6 +91,10 @@ export class MessageBubbleComponent implements OnInit {
     return this.message.response?.type === 'list';
   }
 
+  isHelpResponse(): boolean {
+    return Boolean(this.helpContent);
+  }
+
   get visibleListItems(): any[] {
     return this.listItems.slice(0, this.visibleListCount);
   }
@@ -115,14 +129,34 @@ export class MessageBubbleComponent implements OnInit {
     return item.sinopse || item.descricao || item.descricao_curta || null;
   }
 
+  private buildHelpContent(help: any): { title: string; intro: string; sections: { title: string; examples: string[] }[] } {
+    const examples = (help?.examples && typeof help.examples === 'object') ? help.examples : {};
+    const sections = Object.entries(examples)
+      .map(([title, values]) => ({ title, examples: Array.isArray(values) ? values : [] }))
+      .filter(section => section.examples.length > 0);
+
+    return {
+      title: help?.message || 'Como usar o bot',
+      intro: 'Peça filmes por gênero, ator ou diretor. Clique em um exemplo para copiar e mandar rápido.',
+      sections
+    };
+  }
+
   private formatHelpContent(help: any): string {
-    let md = `### ${help.message}\n\n`;
+    if (typeof help === 'string') {
+      return help;
+    }
+
+    const message = (help && typeof help === 'object' && help.message) ? help.message : 'Como usar o bot';
+    const examples = (help && typeof help === 'object' && help.examples) ? help.examples : null;
+
+    let md = `### ${message}\n\n`;
     
-    if (help.examples) {
+    if (examples && typeof examples === 'object') {
       md += '**Exemplos de comandos:**\n\n';
-      for (const [category, examples] of Object.entries(help.examples)) {
+      for (const [category, samples] of Object.entries(examples as Record<string, string[]>)) {
         md += `**${category}:**\n`;
-        for (const example of examples as string[]) {
+        for (const example of samples) {
           md += `- ${example}\n`;
         }
         md += '\n';
