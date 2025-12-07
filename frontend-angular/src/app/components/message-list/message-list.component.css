@@ -151,6 +151,11 @@
   animation-delay: 0.4s;
 }
 
+.scroll-anchor {
+  height: 1px;
+  width: 100%;
+}
+
 @keyframes typing {
   0%, 60%, 100% {
     transform: translateY(0);

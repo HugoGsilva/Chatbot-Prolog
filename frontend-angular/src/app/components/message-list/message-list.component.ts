@@ -15,6 +15,7 @@ export class MessageListComponent implements AfterViewChecked, OnChanges {
   @Input() isTyping = false;
   @Output() exampleClick = new EventEmitter<string>();
   @ViewChild('chatLog') chatLog?: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor?: ElementRef;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['messages'] || changes['isTyping']) {
@@ -39,6 +40,10 @@ export class MessageListComponent implements AfterViewChecked, OnChanges {
     if (this.chatLog) {
       const element = this.chatLog.nativeElement;
       element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+      // Garantir que o último item fique visível mesmo que o contêiner não role
+      if (this.bottomAnchor) {
+        this.bottomAnchor.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
     }
   }
 }
