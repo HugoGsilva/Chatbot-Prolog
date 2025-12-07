@@ -164,6 +164,7 @@ class NLUEngine:
             "diretor_do_filme",
             "atores_do_filme",
             "genero_do_filme",
+            "filmes_por_diretor",
         ]
         for intent_name in keyword_match_intents:
             if intent_name in self.intent_patterns:
@@ -207,6 +208,40 @@ class NLUEngine:
                             
                             if filme_candidate:
                                 entities["filme"] = filme_candidate
+
+                        if intent_name == "filmes_por_diretor":
+                            director_candidate = None
+
+                            matched_keyword = keyword if keyword in original_lower else keyword_normalized
+                            search_text_lower = original_lower if keyword in original_lower else original_normalized
+
+                            if matched_keyword in search_text_lower:
+                                idx = search_text_lower.find(matched_keyword)
+                                after_keyword = original_text[idx + len(matched_keyword):].strip()
+
+                                # Remove prefixos comuns antes do nome do diretor
+                                prefixes = [
+                                    "do diretor ", "da diretora ", "do direitor ", "da direitora ",
+                                    "do ", "da ", "por ", "pelo ", "pela ", "de ", "dirigido por ",
+                                ]
+                                for pref in prefixes:
+                                    if after_keyword.lower().startswith(pref):
+                                        after_keyword = after_keyword[len(pref):].strip()
+                                        break
+
+                                director_candidate = after_keyword.rstrip("?")
+
+                            # Estratégia 2: Se não extraiu nada, busca última preposição
+                            if not director_candidate or len(director_candidate) < 2:
+                                preps = [" por ", " de ", " do ", " da ", " pelo ", " pela "]
+                                for prep in preps:
+                                    if prep in original_lower:
+                                        idx = original_lower.rfind(prep)
+                                        director_candidate = original_text[idx + len(prep):].strip().rstrip("?")
+                                        break
+
+                            if director_candidate:
+                                entities["diretor"] = director_candidate
                         
                         # Para recomendar_filme, extrair gênero se presente
                         if intent_name == "recomendar_filme":
@@ -366,6 +401,7 @@ class NLUEngine:
             "atores_do_filme",
             "diretor_do_filme",
             "genero_do_filme",
+            "filmes_por_diretor",
         ]
         for intent_name in priority_intents:
             if intent_name in self.intent_patterns:

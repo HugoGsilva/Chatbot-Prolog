@@ -6,3 +6,7 @@ redis
 thefuzz[speedup]
 spacy>=3.7
 symspellpy>=6.7.0
+
+# Semantic NLU Dependencies
+sentence-transformers>=2.2.0
+torch>=2.0.0
