@@ -156,7 +156,15 @@ class NLUEngine:
                         )
         
         # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme, small_talk)
-        keyword_match_intents = ["filme_aleatorio", "recomendar_filme", "small_talk", "diretor_do_filme", "atores_do_filme"]
+        # Inclui intents de filme para evitar que a correção ortográfica distorça títulos.
+        keyword_match_intents = [
+            "filme_aleatorio",
+            "recomendar_filme",
+            "small_talk",
+            "diretor_do_filme",
+            "atores_do_filme",
+            "genero_do_filme",
+        ]
         for intent_name in keyword_match_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]
@@ -165,8 +173,8 @@ class NLUEngine:
                     if keyword in original_lower or keyword_normalized in original_normalized:
                         entities = {}
                         
-                        # Para diretor_do_filme e atores_do_filme, extrair entidade filme
-                        if intent_name in ["diretor_do_filme", "atores_do_filme"]:
+                        # Para intents ligadas a filme, extrair a entidade título antes de corrigir texto
+                        if intent_name in ["diretor_do_filme", "atores_do_filme", "genero_do_filme"]:
                             filme_candidate = None
                             
                             # Estratégia 1: Busca após o keyword primeiro (mais confiável)
@@ -351,7 +359,14 @@ class NLUEngine:
         
         # ===== VERIFICAÇÃO PRIORITÁRIA: Intents simples (ajuda, saudacao) =====
         # Estas intents têm precedência quando há match exato das keywords
-        priority_intents = ["ajuda", "saudacao", "contar_filmes", "atores_do_filme", "diretor_do_filme"]
+        priority_intents = [
+            "ajuda",
+            "saudacao",
+            "contar_filmes",
+            "atores_do_filme",
+            "diretor_do_filme",
+            "genero_do_filme",
+        ]
         for intent_name in priority_intents:
             if intent_name in self.intent_patterns:
                 pattern = self.intent_patterns[intent_name]

@@ -10,6 +10,7 @@ from .base_handler import BaseHandler
 from ..schemas import ChatResponse, ResponseType
 from ..nlu import find_best_film, find_best_film_with_suggestions
 from ..prolog_service import PrologTimeoutError
+from ..response_formatter import ResponseFormatter
 
 
 class QueryHandlers(BaseHandler):
@@ -68,9 +69,10 @@ class QueryHandlers(BaseHandler):
         
         generos = [{"nome": r["NomeGenero"]} for r in results]
         
-        return ChatResponse(
-            type=ResponseType.LIST,
-            content=generos,
+        # Formata como texto amigável (evita lista vazia no frontend)
+        return ResponseFormatter.format_genero_list(
+            generos,
+            filme_titulo=best_match.title()
         )
     
     async def handle_diretor_do_filme(

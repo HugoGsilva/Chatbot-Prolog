@@ -252,7 +252,8 @@
         "entity_type": "MOVIE",
         "examples": [
             "gênero de jaws",
-            "qual gênero do filme training day"
+            "qual gênero do filme training day",
+            "qual o tipo de grown ups"
         ]
     },
     "recomendar_filme": {
