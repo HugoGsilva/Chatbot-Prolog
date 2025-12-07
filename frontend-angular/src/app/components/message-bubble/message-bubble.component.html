@@ -1,16 +1,18 @@
 <div class="message-content">
   <div class="message-bubble" [class.bot-bubble]="message.isBot" [class.user-bubble]="!message.isBot">
     <ng-container *ngIf="isListResponse(); else nonListContent">
-      <div class="list-response">
+      <div class="list-response" role="region" aria-live="polite">
         <p class="list-heading">Mostrando {{ displayCount }} de {{ listItems.length }} filmes</p>
-        <div class="list-item" *ngFor="let item of visibleListItems">
-          <span class="list-badge">★</span>
-          <div>
-            <p class="list-title">{{ item.titulo }}</p>
-            <p class="list-meta" *ngIf="getItemMeta(item)">{{ getItemMeta(item) }}</p>
-            <p class="list-description" *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
-          </div>
-        </div>
+        <ul class="list-grid" role="list">
+          <li class="list-card" role="listitem" *ngFor="let item of visibleListItems">
+            <div class="list-card-bullet" aria-hidden="true">•</div>
+            <div>
+              <p class="list-title">{{ item.titulo }}</p>
+              <p class="list-meta" *ngIf="getItemMeta(item)">{{ getItemMeta(item) }}</p>
+              <p class="list-description" *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
+            </div>
+          </li>
+        </ul>
         <button *ngIf="hasMoreItems" class="more-btn" (click)="showMoreFilms()">
           Mostrar +10 filmes
         </button>
