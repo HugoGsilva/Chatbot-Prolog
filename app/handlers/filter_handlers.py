@@ -55,6 +55,58 @@ class FilterHandlers(BaseHandler):
             metadata={"total_encontrados": total, "exibindo": len(filmes)}
         )
     
+    async def handle_filmes_por_genero(
+        self, 
+        entities: Dict[str, str], 
+        session_id: str
+    ) -> ChatResponse:
+        """Handler para intenção 'filmes_por_genero' - filmes de ação, comédia, etc."""
+        genero = entities.get("genero", "")
+        
+        if not genero:
+            return ChatResponse(
+                type=ResponseType.ERROR,
+                content="Não consegui identificar o gênero. Pode reformular?",
+                suggestions=["filmes de ação", "filmes de comédia", "filmes de terror"],
+            )
+        
+        # Normaliza gênero
+        best_genre = find_best_genre(genero)
+        
+        if not best_genre:
+            return ChatResponse(
+                type=ResponseType.ERROR,
+                content=f"Não encontrei o gênero '{genero}'. Tente: ação, comédia, drama, terror, suspense, romance.",
+                suggestions=["filmes de ação", "filmes de comédia", "filmes de drama"],
+            )
+        
+        genre_query = best_genre.upper()
+        
+        # Consulta Prolog para buscar filmes do gênero
+        try:
+            query_string = f"imdb_rules:filmes_por_genero('{genre_query}', Titulo)"
+            results = await self._query_prolog(query_string)
+        except PrologTimeoutError:
+            return self._create_timeout_response()
+        
+        if not results:
+            return ChatResponse(
+                type=ResponseType.TEXT,
+                content=f"Não encontrei filmes de {best_genre}.",
+                suggestions=["filmes de ação", "filme aleatório"],
+            )
+        
+        # Limita a 20 resultados
+        filmes = [{"titulo": r["Titulo"]} for r in results[:20]]
+        total = len(results)
+        
+        return ChatResponse(
+            type=ResponseType.LIST,
+            content=filmes,
+            suggestions=[f"filmes de {best_genre}", "filme aleatório"],
+            metadata={"total_encontrados": total, "exibindo": len(filmes), "genero": best_genre}
+        )
+    
     async def handle_contar_filmes(
         self, 
         entities: Dict[str, str], 

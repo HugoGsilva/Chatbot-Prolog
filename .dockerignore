@@ -1,39 +1,78 @@
+##########################
 # Python
-__pycache__
-*.pyc
+##########################
+__pycache__/
+*.py[cod]
 *.pyo
 *.pyd
-.Python
-env/
-venv/
+
 *.egg-info/
+.eggs/
 dist/
 build/
 
-# Node
-frontend-angular/node_modules
-frontend-angular/dist
-frontend-angular/.angular
-frontend-angular/npm-debug.log
+env/
+venv/
+.venv/
+.env
+.env.*
 
-# Docker
-.dockerignore
-Dockerfile*
-docker-compose*.yml
+pip-wheel-metadata/
 
-# Git
-.git
-.gitignore
+##########################
+# Node / Frontend Angular
+##########################
+# Qualquer node_modules
+node_modules/
+npm-debug.log*
+yarn-error.log*
 
-# IDE
-.vscode
-.idea
-*.swp
+# Diretório específico do frontend
+frontend-angular/node_modules/
+frontend-angular/dist/
+frontend-angular/.angular/
+frontend-angular/npm-debug.log*
 
-# Logs
+##########################
+# Logs e arquivos temporários
+##########################
 *.log
+debug_*.txt
+benchmark_results.json
+build-log.txt
+*.tmp
+*.swp
+*.swo
 
-# Tests
+##########################
+# Tests / ferramentas de teste
+##########################
 tests/
 cypress/
 pytest.ini
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+
+##########################
+# Git
+##########################
+.git/
+.gitignore
+
+##########################
+# IDE / Editor
+##########################
+.vscode/
+.idea/
+*.iml
+*.DS_Store
+
+##########################
+# Outros
+##########################
+# Arquivos de banco locais
+*.sqlite3
+*.db
+*.seed

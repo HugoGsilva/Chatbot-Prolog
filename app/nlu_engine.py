@@ -158,15 +158,13 @@ class NLUEngine:
                 pattern = self.intent_patterns[intent_name]
                 for keyword in pattern["keywords"]:
                     keyword_normalized = normalize_text(keyword)
-                    # Match com e sem acentos
+                    # Match EXATO ou com espaços delimitadores (não substring parcial)
                     if (original_lower == keyword or 
                         original_normalized == keyword_normalized or
-                        original_lower.startswith(keyword + " ") or 
-                        original_normalized.startswith(keyword_normalized + " ") or
-                        original_lower.endswith(" " + keyword) or 
-                        original_normalized.endswith(" " + keyword_normalized) or
-                        keyword in original_lower or
-                        keyword_normalized in original_normalized):
+                        original_lower == keyword + "?" or
+                        original_normalized == keyword_normalized + "?" or
+                        re.search(r'\b' + re.escape(keyword) + r'\b', original_lower) or
+                        re.search(r'\b' + re.escape(keyword_normalized) + r'\b', original_normalized)):
                         logger.debug(f"Intent prioritário (exact) detectado: '{intent_name}' via keyword '{keyword}'")
                         return NLUResult(
                             intent=intent_name,
@@ -178,6 +176,7 @@ class NLUEngine:
         
         # 0.2 Intents com match por keyword contida (filme_aleatorio, recomendar_filme, small_talk)
         # Inclui intents de filme para evitar que a correção ortográfica distorça títulos.
+        # IMPORTANTE: filmes_por_ator e filmes_por_genero têm prioridade sobre filmes_por_diretor
         keyword_match_intents = [
             "filme_aleatorio",
             "recomendar_filme",
@@ -185,6 +184,8 @@ class NLUEngine:
             "diretor_do_filme",
             "atores_do_filme",
             "genero_do_filme",
+            "filmes_por_ator",  # ⬆️ Prioridade ANTES de filmes_por_diretor
+            "filmes_por_genero",  # ⬆️ Prioridade ANTES de filmes_por_diretor
             "filmes_por_diretor",
         ]
         for intent_name in keyword_match_intents:
@@ -263,6 +264,71 @@ class NLUEngine:
 
                             if director_candidate:
                                 entities["diretor"] = director_candidate
+                        
+                        # Para filmes_por_ator, extrair nome do ator
+                        if intent_name == "filmes_por_ator":
+                            ator_candidate = None
+
+                            matched_keyword = keyword if keyword in original_lower else keyword_normalized
+                            search_text_lower = original_lower if keyword in original_lower else original_normalized
+
+                            if matched_keyword in search_text_lower:
+                                idx = search_text_lower.find(matched_keyword)
+                                after_keyword = original_text[idx + len(matched_keyword):].strip()
+
+                                # Remove prefixos comuns antes do nome do ator
+                                prefixes = [
+                                    "com ", "o ator ", "a atriz ", "por ", "pelo ", "pela ", "de ", "do ", "da "
+                                ]
+                                for pref in prefixes:
+                                    if after_keyword.lower().startswith(pref):
+                                        after_keyword = after_keyword[len(pref):].strip()
+                                        break
+
+                                ator_candidate = after_keyword.rstrip("?")
+
+                            # Estratégia 2: Se não extraiu nada, busca última preposição
+                            if not ator_candidate or len(ator_candidate) < 2:
+                                preps = [" com ", " por ", " de ", " do ", " da "]
+                                for prep in preps:
+                                    if prep in original_lower:
+                                        idx = original_lower.rfind(prep)
+                                        ator_candidate = original_text[idx + len(prep):].strip().rstrip("?")
+                                        break
+
+                            if ator_candidate:
+                                entities["ator"] = ator_candidate
+                        
+                        # Para filmes_por_genero, extrair gênero
+                        if intent_name == "filmes_por_genero":
+                            genero_candidate = None
+
+                            matched_keyword = keyword if keyword in original_lower else keyword_normalized
+                            search_text_lower = original_lower if keyword in original_lower else original_normalized
+
+                            # Se keyword já é o gênero (ex: "ação", "comédia")
+                            generos = ["ação", "comédia", "drama", "terror", "suspense", "romance", "sci-fi", "thriller", "documentário", "animação", "aventura", "ficção"]
+                            for g in generos:
+                                if g in search_text_lower:
+                                    genero_candidate = g
+                                    break
+
+                            # Se não encontrou, busca após preposição
+                            if not genero_candidate:
+                                preps = [" de ", " do "]
+                                for prep in preps:
+                                    if prep in original_lower:
+                                        idx = original_lower.rfind(prep)
+                                        after_prep = original_lower[idx + len(prep):].strip().rstrip("?")
+                                        # Remove palavras comuns
+                                        for word in ["um ", "uma ", "filme ", "filmes "]:
+                                            after_prep = after_prep.replace(word, "").strip()
+                                        if after_prep and len(after_prep) > 2:
+                                            genero_candidate = after_prep
+                                        break
+
+                            if genero_candidate:
+                                entities["genero"] = genero_candidate
                         
                         # Para recomendar_filme, extrair gênero se presente
                         if intent_name == "recomendar_filme":
@@ -728,14 +794,6 @@ class NLUEngine:
             logger.debug(f"Erro ao registrar métrica de entity extraction: {e}")
         
         return result
-        )
-        
-        if result:
-            entity, method = result
-            logger.debug(f"Entity match ({method}): '{entity}' for query '{query_text}'")
-            return entity
-        
-        return None
     
     def _extract_entities(self, text: str, doc, intent: str) -> Dict[str, str]:
         """

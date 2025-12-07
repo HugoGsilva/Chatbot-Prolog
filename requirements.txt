@@ -1,12 +1,17 @@
 # Dependências de Produção da API (Serviço 'app')
-fastapi
-uvicorn[standard]
-pyswip
-redis
-thefuzz[speedup]
-spacy>=3.7
-symspellpy>=6.7.0
+fastapi==0.109.0
+uvicorn==0.27.0
+pyswip==0.3.3  # Versão mais recente disponível
+redis==5.0.1
+thefuzz[speedup]==0.22.1
+spacy==3.7.2
+pt-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.7.0/pt_core_news_sm-3.7.0-py3-none-any.whl
+symspellpy==6.7.7
 
-# Semantic NLU Dependencies
-sentence-transformers>=2.2.0
-torch>=2.0.0
+# Semantic NLU Dependencies (versões compatíveis, CPU-only)
+# Stack compatível: torch 2.2.0 + transformers 4.41.0 + sentence-transformers 2.7.0
+# Usando CPU-only para economizar espaço (~200MB vs 755MB com CUDA)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.0+cpu
+transformers==4.41.0
+sentence-transformers==2.7.0

@@ -179,19 +179,21 @@
     },
     "filmes_por_ator": {
         "keywords": [
-            "filmes",
-            "filme",
-            "movies",
-            "movie",
-            "obras"
+            "filmes com",
+            "filme com",
+            "atuando",
+            "atuou",
+            "estrelado por",
+            "estrelando",
+            "ator",
+            "atriz",
+            "atuação de",
+            "participação de"
         ],
         "prepositions": [
-            "por",
-            "de",
-            "do",
-            "da",
             "com",
-            "estrelando"
+            "por",
+            "de"
         ],
         "entity_type": "PERSON",
         "examples": [
@@ -201,6 +203,40 @@
         ]
     },
     "filmes_por_genero": {
+        "keywords": [
+            "filmes de ação",
+            "filmes de comédia",
+            "filmes de drama",
+            "filmes de terror",
+            "filmes de suspense",
+            "filmes de romance",
+            "filmes de ficção",
+            "filmes de aventura",
+            "filmes de animação",
+            "ação",
+            "comédia",
+            "drama",
+            "terror",
+            "suspense",
+            "romance",
+            "sci-fi",
+            "thriller",
+            "documentário",
+            "gênero"
+        ],
+        "prepositions": [
+            "de",
+            "do"
+        ],
+        "entity_type": "GENRE",
+        "examples": [
+            "filmes de ação",
+            "filmes de comédia",
+            "quantos filmes de terror existem",
+            "mostre filmes de suspense"
+        ]
+    },
+    "filmes_por_diretor": {
         "keywords": [
             "filmes",
             "filme",
