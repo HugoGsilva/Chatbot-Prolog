@@ -37,14 +37,18 @@ else
 fi
 
 # 4. Rodar testes Step 1 e 2
-echo -e "\n${YELLOW}[4/5] Rodando testes Steps 1-2...${NC}"
+echo -e "\n${YELLOW}[4/6] Rodando testes Steps 1-2...${NC}"
 pytest tests/test_semantic_classifier.py -v || echo -e "${RED}❌ Falha em test_semantic_classifier.py${NC}"
 pytest tests/test_prolog_normalizer.py -v || echo -e "${RED}❌ Falha em test_prolog_normalizer.py${NC}"
 pytest tests/test_augment_intent_data.py -v || echo -e "${RED}❌ Falha em test_augment_intent_data.py${NC}"
 
 # 5. Rodar testes Step 3 (NLUEngine semântico)
-echo -e "\n${YELLOW}[5/5] Rodando testes Step 3 (NLUEngine semântico)...${NC}"
+echo -e "\n${YELLOW}[5/6] Rodando testes Step 3 (NLUEngine semântico)...${NC}"
 pytest tests/test_nlu_engine_semantic.py -v || echo -e "${RED}❌ Falha em test_nlu_engine_semantic.py${NC}"
+
+# 6. Rodar testes Step 4 (Semantic Entity Extraction)
+echo -e "\n${YELLOW}[6/6] Rodando testes Step 4 (Semantic Entity Extraction)...${NC}"
+pytest tests/test_semantic_entity_extractor.py -v || echo -e "${RED}❌ Falha em test_semantic_entity_extractor.py${NC}"
 
 echo -e "\n=========================================="
 echo -e "${GREEN}✅ TESTES CONCLUÍDOS!${NC}"

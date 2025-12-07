@@ -65,6 +65,9 @@ class NLUEngine:
         # Lazy loading do semantic classifier
         self._semantic_classifier = None
         
+        # Lazy loading do semantic entity extractor
+        self._semantic_entity_extractor = None
+        
         try:
             self.nlp = spacy.load("pt_core_news_sm")
             logger.info("✅ Modelo spaCy 'pt_core_news_sm' carregado com sucesso")
@@ -586,6 +589,54 @@ class NLUEngine:
                 
                 if after_prep and len(after_prep) >= 2:
                     return after_prep
+        
+        return None
+    
+    def _match_entity_hybrid(
+        self, 
+        query_text: str, 
+        entity_cache: List[str],
+        entity_type: str = "generic"
+    ) -> Optional[str]:
+        """
+        Faz matching híbrido de entidade (semantic + fuzzy).
+        
+        Args:
+            query_text: Texto da query ou candidato extraído
+            entity_cache: Cache de entidades conhecidas (ACTOR_CACHE, etc)
+            entity_type: Tipo da entidade para logging
+            
+        Returns:
+            Melhor match ou None
+        """
+        if not self.use_semantic:
+            # Modo keyword: usa find_best_match tradicional
+            from .nlu import find_best_match
+            return find_best_match(query_text, entity_cache, threshold=75)
+        
+        # Modo semântico: usa matching híbrido
+        if self._semantic_entity_extractor is None:
+            # Lazy load do extractor
+            from .semantic_entity_extractor import get_semantic_entity_extractor
+            self._semantic_entity_extractor = get_semantic_entity_extractor(
+                nlp=self.nlp,
+                semantic_classifier=self._semantic_classifier if self._semantic_classifier else None,
+                threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
+            )
+        
+        from .nlu import find_best_match_hybrid
+        result = find_best_match_hybrid(
+            query_text,
+            entity_cache,
+            semantic_extractor=self._semantic_entity_extractor,
+            fuzzy_threshold=75,
+            semantic_threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
+        )
+        
+        if result:
+            entity, method = result
+            logger.debug(f"Entity match ({method}): '{entity}' for query '{query_text}'")
+            return entity
         
         return None
     

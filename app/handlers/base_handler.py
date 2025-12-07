@@ -10,6 +10,7 @@ from typing import Dict, List
 
 from ..schemas import ChatResponse, ResponseType, NLUResult
 from ..prolog_service import prolog_service, PrologTimeoutError
+from ..prolog_normalizer import PrologNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,23 @@ class BaseHandler:
     
     Fornece métodos utilitários compartilhados por todos os handlers.
     """
+    
+    def __init__(self):
+        """Inicializa handler com PrologNormalizer."""
+        self.prolog_normalizer = PrologNormalizer()
+    
+    def _normalize_for_prolog(self, entity: str, entity_type: str = "generic") -> str:
+        """
+        Normaliza entidade para formato Prolog (UPPERCASE).
+        
+        Args:
+            entity: Entidade a normalizar (ex: "Leonardo DiCaprio")
+            entity_type: Tipo da entidade (actor, director, genre, film)
+            
+        Returns:
+            Entidade normalizada para queries Prolog (ex: "LEONARDO DICAPRIO")
+        """
+        return self.prolog_normalizer.normalize_entity_for_query(entity, entity_type)
     
     def _escape_prolog_string(self, text: str) -> str:
         """

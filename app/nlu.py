@@ -437,6 +437,59 @@ def find_best_match(query: str, cache: list[str], threshold: int = 75) -> Option
     return matched_value
 
 
+def find_best_match_hybrid(
+    query: str, 
+    cache: list[str],
+    semantic_extractor=None,
+    fuzzy_threshold: int = 75,
+    semantic_threshold: float = 0.70
+) -> Optional[tuple[str, str]]:
+    """
+    Matching híbrido: tenta semantic primeiro, fallback para fuzzy.
+    
+    Combina:
+    1. Semantic matching com sentence-transformers (se disponível)
+    2. Fuzzy matching tradicional (fallback)
+    
+    Args:
+        query: String de busca
+        cache: Lista de strings para buscar
+        semantic_extractor: SemanticEntityExtractor (opcional)
+        fuzzy_threshold: Score mínimo para fuzzy matching
+        semantic_threshold: Score mínimo para semantic matching
+        
+    Returns:
+        Tupla (matched_value, method) onde method é 'semantic' ou 'fuzzy'
+        ou None se não encontrar match
+    """
+    if not query or not cache:
+        return None
+    
+    # 1. Tenta semantic se disponível
+    if semantic_extractor:
+        try:
+            result = semantic_extractor.find_best_match_hybrid(
+                query,
+                cache,
+                semantic_threshold=semantic_threshold,
+                fuzzy_threshold=fuzzy_threshold
+            )
+            
+            if result:
+                entity, confidence, method = result
+                return entity, method
+        except Exception as e:
+            import logging
+            logging.warning(f"Erro em semantic matching, usando fuzzy fallback: {e}")
+    
+    # 2. Fallback para fuzzy tradicional
+    fuzzy_result = find_best_match(query, cache, threshold=fuzzy_threshold)
+    if fuzzy_result:
+        return fuzzy_result, 'fuzzy'
+    
+    return None
+
+
 def find_best_match_with_suggestions(
     query: str, 
     cache: list[str], 
