@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, HostBinding, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Message } from '../../models/chat.model';
@@ -14,6 +14,8 @@ import DOMPurify from 'dompurify';
 })
 export class MessageBubbleComponent implements OnInit {
   @Input() message!: Message;
+  @HostBinding('class.user-host') get isUserHost(): boolean { return !this.message?.isBot; }
+  @HostBinding('class.bot-host') get isBotHost(): boolean { return !!this.message?.isBot; }
   renderedContent: SafeHtml = '';
   listItems: any[] = [];
   visibleListCount = 3;

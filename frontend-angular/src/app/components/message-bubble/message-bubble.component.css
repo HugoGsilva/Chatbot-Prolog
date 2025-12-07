@@ -1,9 +1,24 @@
+:host {
+  display: flex;
+  max-width: 100%;
+}
+
+:host(.user-host) {
+  justify-content: flex-end;
+}
+
+:host(.bot-host) {
+  justify-content: flex-start;
+}
+
 .message-content {
-  flex: 1;
+  flex: 0 1 75%;
+  width: fit-content;
   max-width: 75%;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  min-width: 160px;
 }
 
 .message-bubble {
@@ -26,6 +41,14 @@
   color: white;
   border: none;
   box-shadow: 0 2px 8px rgba(0, 183, 255, 0.25);
+}
+
+/* Mensagens do usuário: manter em uma linha e truncar com reticências para não quebrar o layout */
+.user-host .message-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .message-text {

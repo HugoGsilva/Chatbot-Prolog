@@ -147,13 +147,9 @@ export class AppComponent {
       return;
     }
 
-    const queries: { [key: string]: string } = {
-      'como_usar': 'ajuda'
-    };
-
-    const query = queries[option];
-    if (query) {
-      this.onSendMessage(query);
+    if (option === 'como_usar') {
+      // Enviar comando direto sem quebras estranhas
+      this.onSendMessage('ajuda');
     }
   }
 
