@@ -418,9 +418,30 @@ class NLUEngine:
         Returns:
             Tuple com (intent_name, confidence_score)
         """
+        import time
+        start_time = time.time()
+        
         if not self.use_semantic:
             # Modo tradicional apenas
-            return self._detect_intent_keyword_based(text_lower, doc)
+            intent, confidence = self._detect_intent_keyword_based(text_lower, doc)
+            latency_ms = (time.time() - start_time) * 1000
+            
+            # Registra métrica
+            try:
+                from .metrics_collector import get_metrics_collector
+                collector = get_metrics_collector()
+                collector.record_classification(
+                    intent=intent,
+                    confidence=confidence,
+                    method="keyword",
+                    latency_ms=latency_ms,
+                    used_cache=False,
+                    fallback=False
+                )
+            except Exception as e:
+                logger.debug(f"Erro ao registrar métrica: {e}")
+            
+            return intent, confidence
         
         # Lazy load do semantic classifier
         if self._semantic_classifier is None:
@@ -431,18 +452,39 @@ class NLUEngine:
         
         if not semantic_results:
             logger.debug("Nenhum resultado semântico, usando keyword fallback")
-            return self._detect_intent_keyword_based(text_lower, doc)
+            intent, confidence = self._detect_intent_keyword_based(text_lower, doc)
+            latency_ms = (time.time() - start_time) * 1000
+            
+            # Registra métrica (fallback)
+            try:
+                from .metrics_collector import get_metrics_collector
+                collector = get_metrics_collector()
+                collector.record_classification(
+                    intent=intent,
+                    confidence=confidence,
+                    method="keyword",
+                    latency_ms=latency_ms,
+                    used_cache=False,
+                    fallback=True
+                )
+            except Exception as e:
+                logger.debug(f"Erro ao registrar métrica: {e}")
+            
+            return intent, confidence
         
         top_intent, top_confidence = semantic_results[0]
         logger.debug(f"Semantic: '{top_intent}' (confidence={top_confidence:.3f})")
         
+        used_fallback = False
+        method = "semantic"
+        
         # High confidence: aceita direto
         if top_confidence >= self._settings.SEMANTIC_INTENT_THRESHOLD:
             logger.debug(f"✅ High confidence semantic match: '{top_intent}'")
-            return top_intent, top_confidence
+            intent, confidence = top_intent, top_confidence
         
         # Validation zone: checa com keyword
-        if top_confidence >= 0.60:
+        elif top_confidence >= 0.60:
             keyword_intent, keyword_confidence = self._detect_intent_keyword_based(text_lower, doc)
             
             # Se keyword concorda, aceita
@@ -450,19 +492,44 @@ class NLUEngine:
                 logger.debug(f"✅ Semantic + keyword agreement: '{top_intent}'")
                 # Boost na confiança por concordância
                 combined_confidence = min(1.0, (top_confidence + keyword_confidence) / 1.5)
-                return top_intent, combined_confidence
+                intent, confidence = top_intent, combined_confidence
+                method = "hybrid"
             
             # Se keyword discorda, usa o de maior confiança
-            if keyword_confidence > top_confidence:
+            elif keyword_confidence > top_confidence:
                 logger.debug(f"⚠️ Keyword override: '{keyword_intent}' (kw={keyword_confidence:.3f} > sem={top_confidence:.3f})")
-                return keyword_intent, keyword_confidence
+                intent, confidence = keyword_intent, keyword_confidence
+                method = "keyword"
+                used_fallback = True
             else:
                 logger.debug(f"⚠️ Semantic wins in validation zone: '{top_intent}'")
-                return top_intent, top_confidence
+                intent, confidence = top_intent, top_confidence
         
         # Low confidence: fallback para keyword
-        logger.debug(f"⚠️ Low semantic confidence ({top_confidence:.3f}), usando keyword fallback")
-        return self._detect_intent_keyword_based(text_lower, doc)
+        else:
+            logger.debug(f"⚠️ Low semantic confidence ({top_confidence:.3f}), usando keyword fallback")
+            intent, confidence = self._detect_intent_keyword_based(text_lower, doc)
+            method = "keyword"
+            used_fallback = True
+        
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # Registra métrica
+        try:
+            from .metrics_collector import get_metrics_collector
+            collector = get_metrics_collector()
+            collector.record_classification(
+                intent=intent,
+                confidence=confidence,
+                method=method,
+                latency_ms=latency_ms,
+                used_cache=True,  # Assume cache foi usado se semantic ativo
+                fallback=used_fallback
+            )
+        except Exception as e:
+            logger.debug(f"Erro ao registrar métrica: {e}")
+        
+        return intent, confidence
     
     def _detect_intent_keyword_based(self, text_lower: str, doc) -> Tuple[str, float]:
         """
@@ -609,28 +676,58 @@ class NLUEngine:
         Returns:
             Melhor match ou None
         """
+        import time
+        start_time = time.time()
+        
+        result = None
+        method = "fuzzy"
+        confidence = 0.0
+        
         if not self.use_semantic:
             # Modo keyword: usa find_best_match tradicional
             from .nlu import find_best_match
-            return find_best_match(query_text, entity_cache, threshold=75)
-        
-        # Modo semântico: usa matching híbrido
-        if self._semantic_entity_extractor is None:
-            # Lazy load do extractor
-            from .semantic_entity_extractor import get_semantic_entity_extractor
-            self._semantic_entity_extractor = get_semantic_entity_extractor(
-                nlp=self.nlp,
-                semantic_classifier=self._semantic_classifier if self._semantic_classifier else None,
-                threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
+            result = find_best_match(query_text, entity_cache, threshold=75)
+            confidence = 0.75 if result else 0.0
+        else:
+            # Modo semântico: usa matching híbrido
+            if self._semantic_entity_extractor is None:
+                # Lazy load do extractor
+                from .semantic_entity_extractor import get_semantic_entity_extractor
+                self._semantic_entity_extractor = get_semantic_entity_extractor(
+                    nlp=self.nlp,
+                    semantic_classifier=self._semantic_classifier if self._semantic_classifier else None,
+                    threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
+                )
+            
+            from .nlu import find_best_match_hybrid
+            match_result = find_best_match_hybrid(
+                query_text,
+                entity_cache,
+                semantic_extractor=self._semantic_entity_extractor,
+                fuzzy_threshold=75,
+                semantic_threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
             )
+            
+            if match_result:
+                result, confidence, method = match_result[0], match_result[1], match_result[2]
         
-        from .nlu import find_best_match_hybrid
-        result = find_best_match_hybrid(
-            query_text,
-            entity_cache,
-            semantic_extractor=self._semantic_entity_extractor,
-            fuzzy_threshold=75,
-            semantic_threshold=self._settings.SEMANTIC_ENTITY_THRESHOLD
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # Registra métrica
+        try:
+            from .metrics_collector import get_metrics_collector
+            collector = get_metrics_collector()
+            collector.record_entity_extraction(
+                entity_type=entity_type,
+                method=method,
+                latency_ms=latency_ms,
+                confidence=confidence,
+                used_cache=self.use_semantic  # Assume cache usado se semantic ativo
+            )
+        except Exception as e:
+            logger.debug(f"Erro ao registrar métrica de entity extraction: {e}")
+        
+        return result
         )
         
         if result:

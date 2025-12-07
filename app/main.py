@@ -384,6 +384,98 @@ async def get_session_history(session_id: str, limit: int = 10):
 
 
 # =============================================================================
+# MONITORING & METRICS ENDPOINTS
+# =============================================================================
+
+@app.get("/metrics")
+async def get_metrics():
+    """
+    Retorna métricas de performance do NLU (classificação e extração de entidades).
+    
+    Returns:
+        Dict com estatísticas agregadas:
+        - classification_stats: Métricas de detecção de intent
+        - entity_extraction_stats: Métricas de extração de entidades
+        - ab_test_stats: Resultados de testes A/B (semantic vs keyword)
+        - cache_stats: Estatísticas de cache (hits, misses, hit_rate)
+    """
+    try:
+        from .metrics_collector import get_metrics_collector
+        from .embedding_cache import get_query_cache, get_entity_cache
+        
+        collector = get_metrics_collector()
+        query_cache = get_query_cache()
+        entity_cache = get_entity_cache()
+        
+        return {
+            "classification_stats": collector.get_classification_stats(),
+            "ab_test_stats": collector.get_ab_test_stats(),
+            "cache_stats": {
+                "query_cache": query_cache.get_stats(),
+                "entity_cache": entity_cache.get_stats()
+            }
+        }
+    except Exception as e:
+        print(f"[ERROR] Erro ao buscar métricas: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar métricas")
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint com status de componentes críticos.
+    
+    Returns:
+        Dict com status de:
+        - redis: Conectividade com Redis
+        - prolog: Status do motor Prolog
+        - nlu: Status do NLU engine (semantic/keyword)
+        - cache: Estatísticas de cache
+    """
+    try:
+        # Verifica Redis
+        redis_ok = await session_service.ping()
+        
+        # Verifica NLU engine
+        nlu_status = {
+            "loaded": nlu_engine is not None,
+            "semantic_enabled": nlu_engine.use_semantic if nlu_engine else False,
+            "patterns_loaded": len(nlu_engine.intent_patterns) if nlu_engine else 0
+        }
+        
+        # Verifica Prolog
+        prolog_status = {
+            "loaded": prolog_service.prolog is not None
+        }
+        
+        # Cache stats
+        from .embedding_cache import get_query_cache, get_entity_cache
+        query_cache = get_query_cache()
+        entity_cache = get_entity_cache()
+        
+        cache_status = {
+            "query_cache_size": query_cache.get_stats()["current_size"],
+            "entity_cache_size": entity_cache.get_stats()["current_size"],
+            "query_hit_rate": query_cache.get_stats()["hit_rate"],
+            "entity_hit_rate": entity_cache.get_stats()["hit_rate"]
+        }
+        
+        return {
+            "status": "healthy" if redis_ok and prolog_status["loaded"] and nlu_status["loaded"] else "degraded",
+            "redis": "ok" if redis_ok else "error",
+            "prolog": prolog_status,
+            "nlu": nlu_status,
+            "cache": cache_status
+        }
+    except Exception as e:
+        print(f"[ERROR] Erro no health check: {e}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+# =============================================================================
 # NOTA: Endpoints legados foram removidos na Fase 5 (Thin Client Migration)
 # 
 # Endpoints removidos:

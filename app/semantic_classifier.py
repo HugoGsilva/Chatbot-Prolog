@@ -50,16 +50,25 @@ class SemanticIntentClassifier:
             logger.info(f"✅ Model loaded successfully")
         return self._model
     
-    def load_intent_patterns(self, patterns: dict) -> None:
+    def load_intent_patterns(self, patterns: dict, use_cache: bool = True) -> None:
         """
         Load intent patterns and compute embeddings for example queries.
         
         Args:
             patterns: Intent patterns dict from intent_patterns.json
+            use_cache: Se True, usa cache de embeddings para exemplos
         """
         logger.info("Computing embeddings for intent examples...")
         
+        # Prepara cache se necessário
+        cache = None
+        if use_cache:
+            from .embedding_cache import get_query_cache
+            cache = get_query_cache()
+        
         total_examples = 0
+        cache_hits = 0
+        
         for intent, pattern in patterns.items():
             examples = pattern.get("examples", [])
             
@@ -67,29 +76,60 @@ class SemanticIntentClassifier:
                 logger.warning(f"Intent '{intent}' has no examples, skipping")
                 continue
             
-            # Encode examples to embeddings
-            embeddings = self.model.encode(
-                examples, 
-                convert_to_tensor=True,
-                show_progress_bar=False
-            )
+            # Tenta buscar exemplos do cache individualmente
+            embeddings_list = []
+            examples_to_encode = []
             
-            self.intent_embeddings[intent] = embeddings
+            if use_cache and cache:
+                for example in examples:
+                    cached_emb = cache.get(example)
+                    if cached_emb is not None:
+                        embeddings_list.append(cached_emb)
+                        cache_hits += 1
+                    else:
+                        examples_to_encode.append(example)
+            else:
+                examples_to_encode = examples
+            
+            # Codifica exemplos que não estavam em cache
+            if examples_to_encode:
+                new_embeddings = self.model.encode(
+                    examples_to_encode, 
+                    convert_to_tensor=True,
+                    show_progress_bar=False
+                )
+                
+                # Armazena no cache
+                if use_cache and cache:
+                    for example, emb in zip(examples_to_encode, new_embeddings):
+                        cache.put(example, emb)
+                
+                embeddings_list.extend(new_embeddings)
+            
+            # Combina embeddings (cache + novos)
+            if embeddings_list:
+                self.intent_embeddings[intent] = torch.stack(embeddings_list) if len(embeddings_list) > 1 else embeddings_list[0].unsqueeze(0)
+            
             self.intent_examples[intent] = examples
             total_examples += len(examples)
             
             logger.debug(f"Intent '{intent}': {len(examples)} examples encoded")
         
         self._is_loaded = True
-        logger.info(f"✅ Loaded {len(self.intent_embeddings)} intents with {total_examples} total examples")
+        
+        if use_cache and cache:
+            logger.info(f"✅ Loaded {len(self.intent_embeddings)} intents with {total_examples} total examples ({cache_hits} cache hits)")
+        else:
+            logger.info(f"✅ Loaded {len(self.intent_embeddings)} intents with {total_examples} total examples")
     
-    def classify(self, query: str, top_k: int = 3) -> List[Tuple[str, float]]:
+    def classify(self, query: str, top_k: int = 3, use_cache: bool = True) -> List[Tuple[str, float]]:
         """
         Classify user query to intents using semantic similarity.
         
         Args:
             query: User query text
             top_k: Number of top intents to return
+            use_cache: Se True, usa cache de embeddings
             
         Returns:
             List of (intent, confidence) tuples, sorted by confidence descending
@@ -104,12 +144,30 @@ class SemanticIntentClassifier:
         if not query or not query.strip():
             return [("unknown", 0.0)]
         
-        # Encode query
-        query_embedding = self.model.encode(
-            query, 
-            convert_to_tensor=True,
-            show_progress_bar=False
-        )
+        # Tenta buscar no cache
+        query_embedding = None
+        used_cache = False
+        
+        if use_cache:
+            from .embedding_cache import get_query_cache
+            cache = get_query_cache()
+            query_embedding = cache.get(query)
+            if query_embedding is not None:
+                used_cache = True
+                logger.debug(f"Cache HIT para query: '{query[:50]}'")
+        
+        # Se não está em cache, calcula
+        if query_embedding is None:
+            query_embedding = self.model.encode(
+                query, 
+                convert_to_tensor=True,
+                show_progress_bar=False
+            )
+            
+            # Armazena no cache
+            if use_cache:
+                cache.put(query, query_embedding)
+                logger.debug(f"Cache MISS, armazenado: '{query[:50]}'")
         
         # Compute similarities for each intent
         scores = []

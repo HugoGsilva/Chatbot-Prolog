@@ -131,7 +131,8 @@ class SemanticEntityExtractor:
         self, 
         query_text: str, 
         known_entities: List[str],
-        top_k: int = 5
+        top_k: int = 5,
+        use_cache: bool = True
     ) -> Optional[Tuple[str, float]]:
         """
         Encontra melhor match semântico entre query e entidades conhecidas.
@@ -140,6 +141,7 @@ class SemanticEntityExtractor:
             query_text: Texto da query (ou candidato extraído)
             known_entities: Lista de entidades conhecidas (ex: ACTOR_CACHE)
             top_k: Quantos top matches considerar
+            use_cache: Se True, usa cache para embeddings de entidades
             
         Returns:
             Tupla (entity, confidence) ou None se nenhum match acima de threshold
@@ -154,6 +156,19 @@ class SemanticEntityExtractor:
             logger.debug("Nenhum candidato extraído para matching semântico")
             return None
         
+        # Prepara cache de entidades
+        entity_cache = None
+        if use_cache:
+            from .embedding_cache import get_entity_cache
+            entity_cache = get_entity_cache()
+            
+            # Verifica se as entidades já estão em cache
+            cache_key = str(sorted(known_entities[:100]))  # Usa primeiras 100 como key
+            cached_embeddings = entity_cache.get(cache_key)
+            
+            if cached_embeddings is not None:
+                logger.debug(f"Cache HIT para entidades (size={len(known_entities)})")
+        
         best_entity = None
         best_score = 0.0
         
@@ -161,24 +176,45 @@ class SemanticEntityExtractor:
         for candidate in candidates:
             logger.debug(f"Testando candidato: '{candidate}'")
             
-            # Gera embedding do candidato
+            # Gera embedding do candidato (usa cache de queries)
             try:
-                candidate_embedding = self._semantic_classifier.model.encode(
-                    candidate, 
-                    convert_to_tensor=True
-                )
+                candidate_embedding = None
+                if use_cache:
+                    from .embedding_cache import get_query_cache
+                    query_cache = get_query_cache()
+                    candidate_embedding = query_cache.get(candidate)
                 
-                # Gera embeddings das entidades conhecidas (batch)
-                # Para performance, processa em batches de 100
+                if candidate_embedding is None:
+                    candidate_embedding = self._semantic_classifier.model.encode(
+                        candidate, 
+                        convert_to_tensor=True
+                    )
+                    if use_cache:
+                        query_cache.put(candidate, candidate_embedding)
+                
+                # Gera embeddings das entidades conhecidas (batch) - com cache
                 batch_size = 100
                 top_matches = []
                 
                 for i in range(0, len(known_entities), batch_size):
                     batch = known_entities[i:i+batch_size]
-                    batch_embeddings = self._semantic_classifier.model.encode(
-                        batch,
-                        convert_to_tensor=True
-                    )
+                    
+                    # Tenta buscar batch do cache
+                    batch_embeddings = None
+                    if use_cache and entity_cache:
+                        batch_key = str(sorted(batch))
+                        batch_embeddings = entity_cache.get(batch_key)
+                    
+                    # Se não está em cache, calcula
+                    if batch_embeddings is None:
+                        batch_embeddings = self._semantic_classifier.model.encode(
+                            batch,
+                            convert_to_tensor=True
+                        )
+                        
+                        # Armazena no cache
+                        if use_cache and entity_cache:
+                            entity_cache.put(batch_key, batch_embeddings)
                     
                     # Calcula cosine similarity
                     from sentence_transformers import util
