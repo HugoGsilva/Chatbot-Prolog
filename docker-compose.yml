@@ -61,32 +61,26 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile # (O Dockerfile multi-stage principal)
-    container_name: prologue-app
-
-    # [FIX 1 e 2] A CORREÇÃO CRÍTICA:
-    # O 'app' SÓ DEVE arrancar DEPOIS que o 'db-init' (ETL) terminar.
+      dockerfile: Dockerfile
+    container_name: chatbot-app-fullstack
     depends_on:
       db-init:
         condition: service_completed_successfully
-      # (Ainda depende do mysql/redis para o runtime normal)
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     environment:
       - PYTHONUNBUFFERED=1
-      # (Removidas as vars de config do Sakila que já não são necessárias)
     volumes:
-      # (Montagem de volume "cirúrgica" para desenvolvimento)
       - ./app:/app/app
       - ./prolog:/app/prolog
-      - ./frontend:/app/frontend
     ports:
-      - "8000:8000"
+      - "80:80"      # Frontend Angular
+      - "8000:8000"  # Backend API
     networks:
       - chatbot-network
+    restart: unless-stopped
 
 networks:
   chatbot-network:

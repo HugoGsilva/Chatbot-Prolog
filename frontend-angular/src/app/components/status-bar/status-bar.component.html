@@ -1,0 +1,9 @@
+<div class="status-bar">
+  <div class="status-indicator">
+    <span class="status-dot" [class.connected]="isConnected"></span>
+    <span class="status-text">{{ statusText }}</span>
+  </div>
+  <div class="latency-indicator" [ngClass]="latencyClass" *ngIf="latency > 0">
+    {{ latencyIcon }} {{ latencyText }}
+  </div>
+</div>

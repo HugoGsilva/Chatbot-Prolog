@@ -1,0 +1,42 @@
+<div class="input-container">
+  <div *ngIf="rateLimitWarning.active" class="rate-limit-warning">
+    <div class="warning-content">
+      <svg class="warning-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <div class="warning-text">
+        <strong>Muitas requisições</strong>
+        <p>Aguarde {{ rateLimitWarning.seconds }} segundos para continuar</p>
+      </div>
+    </div>
+    <div class="countdown-bar">
+      <div class="countdown-progress" [style.width.%]="(rateLimitWarning.seconds / 60) * 100"></div>
+    </div>
+  </div>
+
+  <div class="input-wrapper">
+    <input
+      type="text"
+      [(ngModel)]="userInput"
+      (keypress)="onKeyPress($event)"
+      [disabled]="isDisabled"
+      placeholder="Digite sua mensagem..."
+      class="user-input"
+      aria-label="Digite sua mensagem"
+    />
+    <button
+      type="button"
+      (click)="onSend()"
+      [disabled]="isDisabled || !userInput.trim()"
+      class="send-button"
+      aria-label="Enviar mensagem"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>

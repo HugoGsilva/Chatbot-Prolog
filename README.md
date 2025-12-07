@@ -1,6 +1,6 @@
 # 🤖 Chatbot Netflix-Prolog
 
-Este projeto é um chatbot completo capaz de responder a perguntas sobre a base de dados de filmes Netflix. Utiliza uma arquitetura **Thin Client** que combina a lógica de inferência do **SWI-Prolog** com um backend **FastAPI** (Python), um frontend **JavaScript vanilla** e **Redis** para gestão de sessões.
+Este projeto é um chatbot completo capaz de responder a perguntas sobre a base de dados de filmes Netflix. Utiliza uma arquitetura **Thin Client** que combina a lógica de inferência do **SWI-Prolog** com um backend **FastAPI** (Python), um frontend **Angular** moderno e **Redis** para gestão de sessões.
 
 ## 🏗️ Arquitetura Thin Client
 
@@ -8,17 +8,18 @@ O chatbot implementa uma arquitetura moderna de **Thin Client** onde todo o proc
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                │
-│   • Apenas UI (HTML/CSS/JS vanilla)                            │
+│                    FRONTEND (Angular 17)                        │
+│   • UI moderna com componentes standalone                      │
 │   • Envia texto bruto para POST /chat                          │
 │   • Renderiza respostas por tipo (text, list, error, help)     │
-│   • Gerencia sessão localmente via localStorage                 │
-│   • Sem NLU, sem Fuse.js, sem processamento de linguagem       │
+│   • Gerencia sessão via SessionService + localStorage          │
+│   • Tema escuro/claro com ThemeService                         │
+│   • Markdown rendering, rate limit countdown, animations       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         BACKEND                                 │
+│                     BACKEND (FastAPI)                           │
 │   • Toda lógica NLU/intent recognition                         │
 │   • Correção ortográfica (SymSpell, 133k termos)               │
 │   • Fuzzy matching para entidades (thefuzz)                    │
@@ -31,20 +32,20 @@ O chatbot implementa uma arquitetura moderna de **Thin Client** onde todo o proc
 ### Vantagens da Arquitetura Thin Client:
 - **Segurança**: Lógica de negócio protegida no servidor
 - **Manutenibilidade**: Atualizações de NLU não requerem deploy de frontend
-- **Performance**: Frontend leve, carregamento rápido
+- **Performance**: Frontend otimizado com build Angular
 - **Consistência**: Mesma lógica para todos os clientes
+- **Type Safety**: TypeScript no frontend para melhor manutenção
 
 ---
 
 ## 🏛️ Serviços Docker
 
-O sistema é orquestrado com `docker-compose` e utiliza 4 serviços principais:
+O sistema é orquestrado com `docker-compose` e utiliza 5 serviços principais:
 
 - `mysql`: Servidor MySQL 8.0 que armazena os dados do catálogo Netflix.
 - `db-init`: Serviço one-shot que espera o `mysql` ficar saudável e depois executa os scripts `.sql` para criar o schema e popular os dados.
 - `redis`: Broker/cache para armazenar o histórico de conversas (sessões) do chatbot.
-- `app` (Core): Aplicação principal (Python/FastAPI) que:
-  - Serve o frontend (`frontend/index.html`, `frontend/style.css`, `frontend/main.js`).
+- `app` (Backend): Aplicação principal (Python/FastAPI) que:
   - Expõe o endpoint unificado `POST /chat` para todas as interações.
   - Implementa NLU completo: intent detection, entity extraction, spell correction.
   - Persiste o histórico de sessão no `redis` (TTL 24h).
@@ -55,6 +56,13 @@ O sistema é orquestrado com `docker-compose` e utiliza 4 serviços principais:
     3. Inicia o motor SWI-Prolog (via `pyswip`).
     4. Carrega as regras (`prolog/rules/inferencia.pl`) e os factos (`prolog/knowledge/imdb_kb.pl`).
     5. Inicia o servidor Uvicorn na porta 8000.
+- `frontend` (Angular): Aplicação Angular 17 servida via Nginx que:
+  - UI moderna com tema escuro/claro
+  - Componentes standalone (sem NgModule)
+  - TypeScript para type safety
+  - Markdown rendering, copy button, rate limit countdown
+  - Build otimizado (~500KB gzip)
+  - Servido na porta 80
 
 Notas de logs:
 - Os logs de arranque confirmam caches e ligação ao Redis; o serviço `app` está configurado com `PYTHONUNBUFFERED=1` para evitar buffering e mostrar mensagens em tempo real.
@@ -71,13 +79,18 @@ Este projeto está preparado para "one-click setup" usando Docker Compose.
 
 ### 1) Iniciar o Ambiente (Produção)
 
-Este comando constrói a imagem (Dockerfile multi-stage) e inicia os 4 serviços em segundo plano.
+### 2) Aceder ao Chatbot
 
-```bash
-docker compose up --build -d
+Após os serviços arrancarem (MySQL saudável, caches carregadas), abra no navegador:
+
+```
+http://localhost
 ```
 
-### 2) Aceder ao Chatbot
+**Portas disponíveis:**
+- Frontend Angular: http://localhost (porta 80)
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs 2) Aceder ao Chatbot
 
 Após os serviços arrancarem (MySQL saudável, caches carregadas), abra no navegador:
 

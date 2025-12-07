@@ -1,0 +1,162 @@
+/*
+  Estilos Globais - Netflix Prolog Chatbot Angular
+  Metro Design System com Dark Theme
+*/
+
+:root {
+  /* Cores principais - Metro Blue */
+  --bg-gradient-start: #f0f7ff;
+  --bg-gradient-end: #e6f3ff;
+  --container-bg: #ffffff;
+  --chat-window-bg: #fafcff;
+  
+  /* Cores de mensagens */
+  --bot-bubble-bg: #0078d4;
+  --user-bubble-bg: #e3f2fd;
+  
+  /* Cores de texto */
+  --text-primary: #1f1f1f;
+  --text-secondary: #5e5e5e;
+  --text-muted: #8e8e8e;
+  
+  /* Cores de destaque */
+  --accent-primary: #0078d4;
+  --accent-secondary: #005a9e;
+  --accent-success: #107c10;
+  --accent-error: #e81123;
+  --accent-warning: #ff8c00;
+  
+  /* Bordas e sombras */
+  --border-color: #e8e8e8;
+  --border-accent: #0078d4;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 50%;
+  
+  /* Tipografia */
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  
+  /* Espaçamentos */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Animações */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Tema Escuro */
+body.dark-theme {
+  --bg-gradient-start: #1a1a1a;
+  --bg-gradient-end: #0f0f0f;
+  --container-bg: #1f1f1f;
+  --chat-window-bg: #171717;
+  
+  --bot-bubble-bg: #0078d4;
+  --user-bubble-bg: #2d2d2d;
+  
+  --text-primary: #f0f0f0;
+  --text-secondary: #b8b8b8;
+  --text-muted: #808080;
+  
+  --accent-primary: #60a5fa;
+  --accent-secondary: #3b82f6;
+  --accent-success: #10b981;
+  --accent-error: #ef4444;
+  --accent-warning: #f59e0b;
+  
+  --border-color: #2d2d2d;
+  --border-accent: #60a5fa;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-gradient-start);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Loading dots */
+@keyframes dotFlashing {
+  0%, 80%, 100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,22 @@
+<div class="chatbot-container">
+  <app-status-bar 
+    [isConnected]="isConnected" 
+    [latency]="latency">
+  </app-status-bar>
+  
+  <app-header 
+    (clearChat)="onClearChat()">
+  </app-header>
+  
+  <app-quick-actions 
+    (actionClick)="onQuickAction($event)">
+  </app-quick-actions>
+  
+  <app-message-list 
+    [messages]="messages">
+  </app-message-list>
+  
+  <app-input-area 
+    (sendMessage)="onSendMessage($event)">
+  </app-input-area>
+</div>

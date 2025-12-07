@@ -1,6 +1,7 @@
 """
-Aplicação FastAPI que expõe endpoints para consultar o KB Prolog
-e serve o frontend estático. Carrega regras Prolog e caches NLU no arranque.
+Aplicação FastAPI que expõe endpoints para consultar o KB Prolog.
+Carrega regras Prolog e caches NLU no arranque.
+Frontend Angular servido separadamente via Nginx.
 """
 
 import os
@@ -9,8 +10,6 @@ import csv
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Nossas importações de serviço
@@ -180,20 +179,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SERVIR O FRONTEND (Inalterado) ---
-
-STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
-
-@app.get("/", response_class=FileResponse)
-async def read_index():
-    """Serve o ficheiro index.html do frontend."""
-    return os.path.join(STATIC_DIR, "index.html")
+# --- HEALTH CHECK ---
 
 @app.get("/health")
 async def health_check():
     return {"status": "Chatbot API (V2 Netflix) running"}
-
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- ENDPOINT THIN CLIENT (Fase 2) ---
 

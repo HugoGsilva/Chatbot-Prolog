@@ -1,0 +1,8 @@
+<div class="quick-actions">
+  <button 
+    *ngFor="let action of actions" 
+    class="quick-action-btn" 
+    (click)="onActionClick(action.query)">
+    {{ action.icon }} {{ action.label }}
+  </button>
+</div>

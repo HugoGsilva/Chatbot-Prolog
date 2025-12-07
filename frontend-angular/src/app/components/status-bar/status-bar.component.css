@@ -1,0 +1,48 @@
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px;
+  background: white;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  transition: background-color 0.3s ease;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-error);
+  transition: background-color 0.3s ease;
+}
+
+.status-dot.connected {
+  background: var(--accent-success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.latency-indicator {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.latency-indicator.fast {
+  color: var(--accent-success);
+}
+
+.latency-indicator.medium {
+  color: var(--accent-warning);
+}
+
+.latency-indicator.slow {
+  color: var(--accent-error);
+}

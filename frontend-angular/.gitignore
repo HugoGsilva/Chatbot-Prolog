@@ -1,0 +1,23 @@
+# Ignore dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Ignore build output
+dist/
+out-tsc/
+tmp/
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore Angular cache
+.angular/

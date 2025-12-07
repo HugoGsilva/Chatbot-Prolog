@@ -1,0 +1,16 @@
+<main class="chat-window" #chatLog>
+  <div class="chat-log">
+    <div 
+      *ngFor="let message of messages; trackBy: trackByMessageId" 
+      class="message-wrapper"
+      [class.bot-wrapper]="message.isBot"
+      [class.user-wrapper]="!message.isBot">
+      
+      <div class="avatar" [class.bot-avatar]="message.isBot" [class.user-avatar]="!message.isBot">
+        {{ message.isBot ? '🤖' : '👤' }}
+      </div>
+      
+      <app-message-bubble [message]="message"></app-message-bubble>
+    </div>
+  </div>
+</main>
