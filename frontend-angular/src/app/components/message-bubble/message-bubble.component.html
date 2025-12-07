@@ -1,6 +1,24 @@
 <div class="message-content">
   <div class="message-bubble" [class.bot-bubble]="message.isBot" [class.user-bubble]="!message.isBot">
-    <div class="message-text" [innerHTML]="renderedContent"></div>
+    <ng-container *ngIf="isListResponse(); else markdownBlock">
+      <div class="list-response">
+        <p class="list-heading">Mostrando {{ displayCount }} de {{ listItems.length }} filmes</p>
+        <div class="list-item" *ngFor="let item of visibleListItems">
+          <span class="list-badge">★</span>
+          <div>
+            <p class="list-title">{{ item.titulo }}</p>
+            <p class="list-meta" *ngIf="getItemMeta(item)">{{ getItemMeta(item) }}</p>
+            <p class="list-description" *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
+          </div>
+        </div>
+        <button *ngIf="hasMoreItems" class="more-btn" (click)="showMoreFilms()">
+          Mostrar +10 filmes
+        </button>
+      </div>
+    </ng-container>
+    <ng-template #markdownBlock>
+      <div class="message-text" [innerHTML]="renderedContent"></div>
+    </ng-template>
     
     <button 
       *ngIf="message.isBot" 

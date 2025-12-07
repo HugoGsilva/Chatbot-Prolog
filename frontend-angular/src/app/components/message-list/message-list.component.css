@@ -64,6 +64,7 @@
 .user-wrapper {
   align-items: flex-end;
   flex-direction: row-reverse;
+  gap: 6px;
 }
 
 .avatar {

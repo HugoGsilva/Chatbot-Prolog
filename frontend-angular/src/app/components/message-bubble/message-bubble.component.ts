@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, SecurityContext } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Message } from '../../models/chat.model';
@@ -15,6 +15,8 @@ import DOMPurify from 'dompurify';
 export class MessageBubbleComponent implements OnInit {
   @Input() message!: Message;
   renderedContent: SafeHtml = '';
+  listItems: any[] = [];
+  visibleListCount = 3;
 
   constructor(private sanitizer: DomSanitizer) {}
 
@@ -43,8 +45,9 @@ export class MessageBubbleComponent implements OnInit {
           textContent = this.formatHelpContent(helpContent);
         } else if (responseType === 'list') {
           // Conteúdo de lista é um array de objetos
-          const listContent = rawContent as any[];
-          textContent = this.formatListContent(listContent);
+          const listContent = (rawContent as any[]) || [];
+          this.prepareListContent(listContent);
+          return; // lista renderizada separadamente
         } else if (typeof rawContent === 'string') {
           // Conteúdo já é string
           textContent = rawContent;
@@ -68,6 +71,50 @@ export class MessageBubbleComponent implements OnInit {
     }
   }
 
+  private prepareListContent(items: any[]): void {
+    this.listItems = items || [];
+    this.visibleListCount = Math.min(3, this.listItems.length);
+    this.renderedContent = '';
+  }
+
+  isListResponse(): boolean {
+    return this.message.response?.type === 'list';
+  }
+
+  get visibleListItems(): any[] {
+    return this.listItems.slice(0, this.visibleListCount);
+  }
+
+  get hasMoreItems(): boolean {
+    return this.listItems.length > this.visibleListCount;
+  }
+
+  showMoreFilms(): void {
+    this.visibleListCount = Math.min(this.listItems.length, this.visibleListCount + 10);
+  }
+
+  get displayCount(): number {
+    return Math.min(this.visibleListCount, this.listItems.length);
+  }
+
+  getItemMeta(item: any): string | null {
+    const parts: string[] = [];
+    if (item.ano) {
+      parts.push(String(item.ano));
+    }
+    if (item.genero) {
+      parts.push(item.genero);
+    }
+    if (item.diretor) {
+      parts.push(`Dir: ${item.diretor}`);
+    }
+    return parts.length ? parts.join(' • ') : null;
+  }
+
+  getItemDescription(item: any): string | null {
+    return item.sinopse || item.descricao || item.descricao_curta || null;
+  }
+
   private formatHelpContent(help: any): string {
     let md = `### ${help.message}\n\n`;
     
@@ -85,42 +132,21 @@ export class MessageBubbleComponent implements OnInit {
     return md;
   }
 
-  private formatListContent(items: any[]): string {
-    if (!items || items.length === 0) {
-      return '**Nenhum resultado encontrado.**';
+  getContentText(): string | undefined {
+    const content = this.message.response?.content;
+    if (typeof content === 'string') {
+      return content;
     }
-    
-    let md = `### 🎬 Encontrei ${items.length} ${items.length === 1 ? 'filme' : 'filmes'}:\n\n`;
-    
-    // Limitar a 50 filmes para não sobrecarregar a UI
-    const displayItems = items.slice(0, 50);
-    
-    for (const item of displayItems) {
-      if (item.titulo) {
-        md += `- **${item.titulo}**`;
-        if (item.ano) md += ` (${item.ano})`;
-        if (item.diretor) md += ` - Dir: ${item.diretor}`;
-        md += '\n';
-      }
+    if (typeof this.message.text === 'string') {
+      return this.message.text;
     }
-    
-    if (items.length > 50) {
-      md += `\n*... e mais ${items.length - 50} filmes*`;
-    }
-    
-    return md;
+    return undefined;
   }
 
-  copyToClipboard(text: string): void {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(
-        () => console.log('Texto copiado!'),
-        (err) => console.error('Erro ao copiar:', err)
-      );
+  copyToClipboard(text?: string): void {
+    if (!text) {
+      return;
     }
-  }
-
-  getContentText(): string {
-    return this.message.response?.content || this.message.text;
+    navigator.clipboard?.writeText(text).catch((err) => console.error('Erro ao copiar:', err));
   }
 }
