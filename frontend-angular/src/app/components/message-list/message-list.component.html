@@ -13,4 +13,14 @@
       <app-message-bubble [message]="message"></app-message-bubble>
     </div>
   </div>
+  
+  <!-- Indicador de digitação -->
+  <div *ngIf="isTyping" class="typing-indicator">
+    <div class="avatar bot-avatar">🤖</div>
+    <div class="typing-bubble">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
 </main>

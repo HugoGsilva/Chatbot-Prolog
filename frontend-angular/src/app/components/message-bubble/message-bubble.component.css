@@ -1,6 +1,6 @@
 .message-content {
   flex: 1;
-  max-width: 75%;
+  max-width: 65%;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -22,8 +22,8 @@
 
 .user-bubble {
   background: var(--user-bubble-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  color: white;
+  border: none;
 }
 
 .message-text {

@@ -8,15 +8,49 @@
     (clearChat)="onClearChat()">
   </app-header>
   
-  <app-quick-actions 
-    (actionClick)="onQuickAction($event)">
-  </app-quick-actions>
-  
   <app-message-list 
-    [messages]="messages">
+    [messages]="messages"
+    [isTyping]="isTyping">
   </app-message-list>
+  
+  <app-quick-actions 
+    (actionClick)="onQuickAction($event)"
+    (toggleHelp)="toggleHelpMenu()">
+  </app-quick-actions>
   
   <app-input-area 
     (sendMessage)="onSendMessage($event)">
   </app-input-area>
+</div>
+
+<!-- Painel lateral de ajuda -->
+<div class="help-overlay" *ngIf="showHelpMenu" (click)="closeHelpMenu()">
+  <div class="help-panel" (click)="$event.stopPropagation()">
+    <div class="help-header">
+      <h2>Central de Ajuda</h2>
+      <button class="close-btn" (click)="closeHelpMenu()">✕</button>
+    </div>
+    
+    <div class="help-content">
+      <div class="help-option" (click)="onHelpOption('como_usar')">
+        <span class="help-icon">💬</span>
+        <span class="help-text">Como usar o bot</span>
+      </div>
+      
+      <div class="help-option" (click)="onHelpOption('top_rated')">
+        <span class="help-icon">⭐</span>
+        <span class="help-text">Filmes mais avaliados</span>
+      </div>
+      
+      <div class="help-option" (click)="onHelpOption('recent')">
+        <span class="help-icon">🕐</span>
+        <span class="help-text">Lançamentos recentes</span>
+      </div>
+      
+      <div class="help-option" (click)="onHelpOption('suggestions')">
+        <span class="help-icon">💡</span>
+        <span class="help-text">Sugestões do dia</span>
+      </div>
+    </div>
+  </div>
 </div>

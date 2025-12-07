@@ -1,39 +1,48 @@
 .quick-actions {
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
   padding: 16px 24px;
-  background: white;
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
-  scrollbar-width: none;
-  transition: background-color 0.3s ease;
-}
-
-.quick-actions::-webkit-scrollbar {
-  display: none;
+  background: var(--container-bg);
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .quick-action-btn {
-  flex-shrink: 0;
-  padding: 10px 18px;
-  background: #f5f8ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--chat-window-bg);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  border-radius: var(--radius-md);
+  border-radius: 24px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .quick-action-btn:hover {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
   color: white;
-  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
+}
+
+.quick-action-btn.help-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+
+.quick-action-btn.help-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .quick-action-btn:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
 }

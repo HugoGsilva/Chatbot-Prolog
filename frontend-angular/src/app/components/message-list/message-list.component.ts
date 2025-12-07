@@ -12,6 +12,7 @@ import { MessageBubbleComponent } from '../message-bubble/message-bubble.compone
 })
 export class MessageListComponent implements AfterViewChecked {
   @Input() messages: Message[] = [];
+  @Input() isTyping = false;
   @ViewChild('chatLog') chatLog?: ElementRef;
 
   ngAfterViewChecked(): void {

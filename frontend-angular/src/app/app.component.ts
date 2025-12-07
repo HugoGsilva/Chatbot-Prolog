@@ -28,6 +28,8 @@ export class AppComponent {
   messages: Message[] = [];
   isConnected = false;
   latency = 0;
+  isTyping = false;
+  showHelpMenu = false;
 
   constructor(
     private chatService: ChatService,
@@ -80,11 +82,15 @@ export class AppComponent {
     };
     this.messages.push(userMessage);
 
+    // Ativar indicador de digitação
+    this.isTyping = true;
+
     // Enviar para API
     const sessionId = this.sessionService.getCurrentSessionId();
     this.chatService.sendMessage(text, sessionId).subscribe({
       next: ({ response, latency }) => {
         this.latency = latency;
+        this.isTyping = false;
         const botMessage: Message = {
           id: this.generateMessageId(),
           text: '',
@@ -95,7 +101,7 @@ export class AppComponent {
         this.messages.push(botMessage);
       },
       error: (error) => {
-        // Erro será tratado no componente de input
+        this.isTyping = false;
         console.error('Error sending message:', error);
       }
     });
@@ -109,6 +115,42 @@ export class AppComponent {
     this.messages = [];
     this.sessionService.resetSession();
     this.addWelcomeMessage();
+  }
+
+  toggleHelpMenu(): void {
+    this.showHelpMenu = !this.showHelpMenu;
+  }
+
+  closeHelpMenu(): void {
+    this.showHelpMenu = false;
+  }
+
+  onHelpOption(option: string): void {
+    this.closeHelpMenu();
+    
+    const devFeatures = ['top_rated', 'suggestions'];
+    
+    if (devFeatures.includes(option)) {
+      const devMessage: Message = {
+        id: this.generateMessageId(),
+        text: '',
+        isBot: true,
+        timestamp: new Date(),
+        response: {
+          type: 'text' as any,
+          content: '⚠️ **Funcionalidade em desenvolvimento**\n\n' +
+                   'Esta opção estará disponível em breve. ' +
+                   'Por enquanto, experimente perguntar sobre gêneros, atores ou diretores!'
+        }
+      };
+      this.messages.push(devMessage);
+    } else {
+      const queries: { [key: string]: string } = {
+        'como_usar': 'ajuda',
+        'recent': 'filmes de 2024'
+      };
+      this.onSendMessage(queries[option]);
+    }
   }
 
   private generateMessageId(): string {
