@@ -36,6 +36,8 @@
 
   .message-bubble {
     padding: 12px 14px;
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
   }
 
   .help-hero,
@@ -50,11 +52,30 @@
   .help-chip {
     font-size: 0.8rem;
   }
+
+  .list-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .list-card-bullet {
+    margin-top: 0;
+    font-size: 1.2rem;
+  }
+
+  .list-title {
+    line-height: 1.4;
+  }
+
+  .list-description {
+    font-size: 0.82rem;
+  }
 }
 
 .message-bubble {
   padding: 14px 18px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   line-height: 1.6;
   position: relative;
   word-wrap: break-word;
@@ -64,14 +85,14 @@
 .bot-bubble {
   background: var(--bot-bubble-bg);
   color: var(--text-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
 }
 
 .user-bubble {
   background: var(--user-bubble-bg);
   color: white;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 183, 255, 0.25);
+  box-shadow: 0 10px 24px rgba(0, 183, 255, 0.3);
 }
 
 /* Mensagens do usuário: manter em uma linha e truncar com reticências para não quebrar o layout */

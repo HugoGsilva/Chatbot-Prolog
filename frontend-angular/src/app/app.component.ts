@@ -6,7 +6,6 @@ import { MessageListComponent } from './components/message-list/message-list.com
 import { InputAreaComponent } from './components/input-area/input-area.component';
 import { ChatService } from './services/chat.service';
 import { SessionService } from './services/session.service';
-import { ThemeService } from './services/theme.service';
 import { Message, ChatResponse } from './models/chat.model';
 
 @Component({
@@ -32,8 +31,7 @@ export class AppComponent {
 
   constructor(
     private chatService: ChatService,
-    private sessionService: SessionService,
-    private themeService: ThemeService
+    private sessionService: SessionService
   ) {
     this.checkConnection();
     this.addWelcomeMessage();
