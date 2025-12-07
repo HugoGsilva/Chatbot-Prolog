@@ -1,11 +1,27 @@
 .chatbot-container {
   width: 100%;
   max-width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--container-bg);
   position: relative;
+  padding-top: 96px; /* offset for fixed header */
+}
+
+/* Garantir que a área de mensagens expanda e a barra de envio permaneça no rodapé da viewport */
+app-message-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+app-input-area {
+  position: sticky;
+  bottom: 0;
+  background: var(--container-bg);
+  padding-top: var(--spacing-sm);
+  z-index: 10;
 }
 
 @media (max-width: 900px) {
