@@ -46,3 +46,17 @@
 .latency-indicator.slow {
   color: var(--accent-error);
 }
+
+@media (max-width: 600px) {
+  .status-bar {
+    padding: 8px 14px;
+    font-size: 0.7rem;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .status-indicator {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

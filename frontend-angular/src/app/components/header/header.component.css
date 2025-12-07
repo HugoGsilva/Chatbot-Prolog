@@ -48,6 +48,10 @@
 }
 
 @media (max-width: 600px) {
+  .chatbot-header {
+    padding: 14px 16px;
+  }
+
   .header-title {
     gap: var(--spacing-sm);
   }
@@ -61,6 +65,15 @@
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--spacing-xs);
+  }
+
+  .chatbot-header h1 {
+    font-size: 1.05rem;
+  }
+
+  .chatbot-header .subtitle {
+    font-size: 0.8rem;
   }
 }
 

@@ -44,6 +44,10 @@ export class MessageListComponent implements AfterViewChecked, OnChanges {
       if (this.bottomAnchor) {
         this.bottomAnchor.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
+      // Também garante rolagem da janela inteira (útil em mobile / inspeção responsiva)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+      }
     }
   }
 }

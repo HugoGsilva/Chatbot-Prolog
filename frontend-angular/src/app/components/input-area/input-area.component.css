@@ -130,3 +130,27 @@
   width: 20px;
   height: 20px;
 }
+
+@media (max-width: 600px) {
+  .input-container {
+    padding: 12px 14px;
+    box-shadow: 0 -1px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .input-wrapper {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  .user-input {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.95rem;
+    padding: 10px 12px;
+  }
+
+  .send-button {
+    width: 100%;
+    padding: 12px;
+  }
+}

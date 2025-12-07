@@ -31,6 +31,12 @@ app-input-area {
   }
 }
 
+@media (max-width: 600px) {
+  .chatbot-container {
+    padding-top: 88px;
+  }
+}
+
 /* Painel lateral de ajuda */
 .help-overlay {
   position: fixed;

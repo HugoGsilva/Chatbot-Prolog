@@ -35,14 +35,23 @@
   }
 
   .message-bubble {
-    padding: 12px 14px;
+    padding: 12px 12px;
     border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  }
+
+  .message-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
   }
 
   .help-hero,
   .help-card {
     padding: 12px;
+  }
+
+  .help-icon-badge {
+    display: none;
   }
 
   .help-grid {
@@ -70,6 +79,23 @@
 
   .list-description {
     font-size: 0.82rem;
+  }
+
+  /* Permitir quebra de linha segura em telas pequenas */
+  .user-host .message-text {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Esconde o ícone e simplifica o cabeçalho de ajuda em tablets/celulares maiores */
+  .help-icon-badge {
+    display: none;
+  }
+
+  .help-hero {
+    grid-template-columns: 1fr;
+    text-align: left;
   }
 }
 
@@ -304,16 +330,7 @@
 }
 
 .help-icon-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #1b2430;
-  color: var(--accent-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  box-shadow: 0 8px 18px rgba(0, 183, 255, 0.25);
+  display: none;
 }
 
 .help-eyebrow {
