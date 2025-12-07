@@ -3,10 +3,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 24px;
-  background: white;
+  background: #0f141b;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-weight: 400;
   transition: background-color 0.3s ease;
 }

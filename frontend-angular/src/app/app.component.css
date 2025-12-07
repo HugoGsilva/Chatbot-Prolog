@@ -100,6 +100,12 @@
 }
 
 .help-option:hover {
+  border-color: rgba(25, 118, 210, 0.25);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.help-option:hover {
   background: var(--border-color);
   transform: translateX(-4px);
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);

@@ -4,34 +4,34 @@
 */
 
 :root {
-  /* Cores principais - Metro Blue */
-  --bg-gradient-start: #e3f2fd;
-  --bg-gradient-end: #bbdefb;
-  --container-bg: #ffffff;
-  --chat-window-bg: #f5f9fc;
+  /* Paleta escura base (imagem guia) */
+  --bg-gradient-start: #0b1017;
+  --bg-gradient-end: #0b1017;
+  --container-bg: #0d121a;
+  --chat-window-bg: #0d121a;
   
   /* Cores de mensagens */
-  --bot-bubble-bg: #e8eaf6;
-  --user-bubble-bg: #1976d2;
+  --bot-bubble-bg: #1b2430;
+  --user-bubble-bg: #00b7ff;
   
   /* Cores de texto */
-  --text-primary: #1f1f1f;
-  --text-secondary: #5e5e5e;
-  --text-muted: #8e8e8e;
+  --text-primary: #e5e8f0;
+  --text-secondary: #b7c2d0;
+  --text-muted: #7f8a99;
   
   /* Cores de destaque */
-  --accent-primary: #0078d4;
-  --accent-secondary: #005a9e;
-  --accent-success: #107c10;
-  --accent-error: #e81123;
-  --accent-warning: #ff8c00;
+  --accent-primary: #00b7ff;
+  --accent-secondary: #008ac7;
+  --accent-success: #22c55e;
+  --accent-error: #ef4444;
+  --accent-warning: #f59e0b;
   
   /* Bordas e sombras */
-  --border-color: #e8e8e8;
-  --border-accent: #0078d4;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --border-color: #1d2633;
+  --border-accent: #00b7ff;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.38);
   
   /* Border Radius */
   --radius-sm: 12px;
@@ -58,29 +58,29 @@
 
 /* Tema Escuro */
 body.dark-theme {
-  --bg-gradient-start: #1a1a1a;
-  --bg-gradient-end: #0f0f0f;
-  --container-bg: #1f1f1f;
-  --chat-window-bg: #171717;
+  --bg-gradient-start: #080c12;
+  --bg-gradient-end: #060910;
+  --container-bg: #090d14;
+  --chat-window-bg: #090d14;
   
-  --bot-bubble-bg: #0078d4;
-  --user-bubble-bg: #2d2d2d;
+  --bot-bubble-bg: #161d28;
+  --user-bubble-bg: #00a2e6;
   
-  --text-primary: #f0f0f0;
-  --text-secondary: #b8b8b8;
-  --text-muted: #808080;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
   
-  --accent-primary: #60a5fa;
-  --accent-secondary: #3b82f6;
-  --accent-success: #10b981;
+  --accent-primary: #00a2e6;
+  --accent-secondary: #0081bd;
+  --accent-success: #22c55e;
   --accent-error: #ef4444;
   --accent-warning: #f59e0b;
   
-  --border-color: #2d2d2d;
-  --border-accent: #60a5fa;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --border-color: #161d28;
+  --border-accent: #00a2e6;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.55);
 }
 
 * {
