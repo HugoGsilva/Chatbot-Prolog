@@ -10,10 +10,16 @@ from .base_handler import BaseHandler
 from ..schemas import ChatResponse, ResponseType
 from ..nlu import find_best_genre, find_best_actor
 from ..prolog_service import PrologTimeoutError
+from .search_handlers import SearchHandlers
 
 
 class FilterHandlers(BaseHandler):
     """Handlers para filtros e contagens."""
+
+    def __init__(self):
+        super().__init__()
+        # Instancia search handlers para delegation
+        self.search_handlers = SearchHandlers()
     
     async def handle_filmes_por_ano(
         self, 
@@ -213,6 +219,14 @@ class FilterHandlers(BaseHandler):
                 metadata={"total": len(filmes), "filtros": ["ator", "genero"]}
             )
             
+        # Caso 2: Apenas Ator (Fallback para filmes_por_ator)
+        if ator:
+            return await self.search_handlers.handle_filmes_por_ator(entities, session_id)
+
+        # Caso 3: Apenas Gênero (Fallback para filmes_por_genero)
+        if genero:
+            return await self.search_handlers.handle_filmes_por_genero(entities, session_id)
+
         # Caso não tenha filtros suficientes ou suportados
         return ChatResponse(
             type=ResponseType.TEXT,
