@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from './components/header/header.component';
 import { StatusBarComponent } from './components/status-bar/status-bar.component';
-import { QuickActionsComponent } from './components/quick-actions/quick-actions.component';
 import { MessageListComponent } from './components/message-list/message-list.component';
 import { InputAreaComponent } from './components/input-area/input-area.component';
 import { ChatService } from './services/chat.service';
@@ -17,7 +16,6 @@ import { Message, ChatResponse } from './models/chat.model';
     CommonModule,
     HeaderComponent,
     StatusBarComponent,
-    QuickActionsComponent,
     MessageListComponent,
     InputAreaComponent
   ],
@@ -105,10 +103,6 @@ export class AppComponent {
         console.error('Error sending message:', error);
       }
     });
-  }
-
-  onQuickAction(query: string): void {
-    this.onSendMessage(query);
   }
 
   onClearChat(): void {

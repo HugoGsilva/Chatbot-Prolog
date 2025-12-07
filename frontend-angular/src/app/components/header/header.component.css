@@ -17,12 +17,43 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.help-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--accent-primary);
+  color: #0b1017;
+  border: 1px solid rgba(0, 183, 255, 0.4);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 183, 255, 0.25);
+  transition: all 0.2s ease;
+}
+
+.help-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 183, 255, 0.35);
+  filter: brightness(1.05);
+}
+
+.help-btn:active {
+  transform: scale(0.98);
+}
+
+.help-icon {
+  font-size: 1.05rem;
 }
 
 .logo {

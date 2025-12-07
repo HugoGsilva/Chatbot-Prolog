@@ -5,18 +5,14 @@
   </app-status-bar>
   
   <app-header 
-    (clearChat)="onClearChat()">
+    (clearChat)="onClearChat()"
+    (toggleHelp)="toggleHelpMenu()">
   </app-header>
   
   <app-message-list 
     [messages]="messages"
     [isTyping]="isTyping">
   </app-message-list>
-  
-  <app-quick-actions 
-    (actionClick)="onQuickAction($event)"
-    (toggleHelp)="toggleHelpMenu()">
-  </app-quick-actions>
   
   <app-input-area 
     (sendMessage)="onSendMessage($event)">

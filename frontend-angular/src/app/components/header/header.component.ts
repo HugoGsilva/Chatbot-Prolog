@@ -11,6 +11,7 @@ import { ThemeService } from '../../services/theme.service';
 })
 export class HeaderComponent {
   @Output() clearChat = new EventEmitter<void>();
+  @Output() toggleHelp = new EventEmitter<void>();
   isDarkTheme = false;
 
   constructor(private themeService: ThemeService) {
@@ -25,5 +26,9 @@ export class HeaderComponent {
 
   onToggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  onHelpClick(): void {
+    this.toggleHelp.emit();
   }
 }
