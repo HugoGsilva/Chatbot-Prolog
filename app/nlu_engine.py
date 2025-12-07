@@ -21,6 +21,8 @@ from thefuzz import fuzz
 
 from .schemas import NLUResult
 from .nlu import is_valid_genre, find_best_genre
+from .config import Settings
+from .semantic_classifier import get_semantic_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +45,25 @@ class NLUEngine:
     HIGH_CONFIDENCE_THRESHOLD = 0.7
     MEDIUM_CONFIDENCE_THRESHOLD = 0.4
     
-    def __init__(self, spell_corrector=None):
+    def __init__(self, spell_corrector=None, use_semantic: bool = None):
         """
         Inicializa o motor NLU carregando o modelo spaCy e padrões de intenção.
         
         Args:
             spell_corrector: Instância opcional do SpellCorrector para correção ortográfica
+            use_semantic: Se True, usa classificação semântica. Se None, usa config
         """
         self._spell_corrector = spell_corrector
+        self._settings = Settings()
+        
+        # Determina se usa semântico
+        if use_semantic is None:
+            self.use_semantic = self._settings.USE_SEMANTIC_NLU
+        else:
+            self.use_semantic = use_semantic
+        
+        # Lazy loading do semantic classifier
+        self._semantic_classifier = None
         
         try:
             self.nlp = spacy.load("pt_core_news_sm")
@@ -61,6 +74,11 @@ class NLUEngine:
         
         self.intent_patterns = self._load_patterns()
         logger.info(f"✅ {len(self.intent_patterns)} padrões de intenção carregados")
+        
+        if self.use_semantic:
+            logger.info("🧠 Modo semântico ATIVADO (híbrido: semantic + keyword)")
+        else:
+            logger.info("📝 Modo keyword ATIVADO (tradicional)")
     
     def set_spell_corrector(self, spell_corrector) -> None:
         """
@@ -282,9 +300,9 @@ class NLUEngine:
         # 3. Extrair entidades baseado no tipo de intenção
         entities = self._extract_entities(text_to_process, doc, intent)
         
-        # 4. Calcular confiança geral
+        # 4. Calcular confiança geral (passa flag de uso semântico)
         overall_confidence = self._calculate_overall_confidence(
-            intent_confidence, entities, intent
+            intent_confidence, entities, intent, used_semantic=self.use_semantic
         )
         
         result = NLUResult(
@@ -322,7 +340,8 @@ class NLUEngine:
         self, 
         intent_confidence: float, 
         entities: Dict[str, str],
-        intent: str
+        intent: str,
+        used_semantic: bool = False
     ) -> float:
         """
         Calcula a confiança geral baseada em múltiplos fatores.
@@ -331,17 +350,23 @@ class NLUEngine:
         - Confiança da detecção de intenção (peso 0.6)
         - Presença de entidades esperadas (peso 0.3)
         - Qualidade das entidades extraídas (peso 0.1)
+        - Boost semântico se usado semantic classifier (+0.05)
         
         Args:
             intent_confidence: Confiança da detecção de intenção
             entities: Entidades extraídas
             intent: Nome da intenção detectada
+            used_semantic: Se True, foi usado semantic classifier
             
         Returns:
             Score de confiança entre 0.0 e 1.0
         """
         # Peso base da detecção de intenção
         weighted_intent = intent_confidence * 0.6
+        
+        # Boost semântico (pequeno bonus por usar semantic classifier)
+        if used_semantic and intent_confidence >= 0.70:
+            weighted_intent = min(1.0, weighted_intent + 0.05)
         
         # Peso das entidades
         entity_score = 0.0
@@ -380,7 +405,65 @@ class NLUEngine:
     
     def _detect_intent(self, text_lower: str, doc) -> Tuple[str, float]:
         """
-        Detecta a intenção principal do texto.
+        Detecta a intenção principal do texto usando lógica híbrida.
+        
+        Estratégia:
+        1. Semantic first (confidence ≥ 0.75): Retorna direto
+        2. Validation zone (0.60 ≤ confidence < 0.75): Valida com keyword
+        3. Fallback (confidence < 0.60): Usa apenas keyword-based
+        
+        Returns:
+            Tuple com (intent_name, confidence_score)
+        """
+        if not self.use_semantic:
+            # Modo tradicional apenas
+            return self._detect_intent_keyword_based(text_lower, doc)
+        
+        # Lazy load do semantic classifier
+        if self._semantic_classifier is None:
+            self._semantic_classifier = get_semantic_classifier()
+        
+        # Classificação semântica
+        semantic_results = self._semantic_classifier.classify(text_lower, top_k=2)
+        
+        if not semantic_results:
+            logger.debug("Nenhum resultado semântico, usando keyword fallback")
+            return self._detect_intent_keyword_based(text_lower, doc)
+        
+        top_intent, top_confidence = semantic_results[0]
+        logger.debug(f"Semantic: '{top_intent}' (confidence={top_confidence:.3f})")
+        
+        # High confidence: aceita direto
+        if top_confidence >= self._settings.SEMANTIC_INTENT_THRESHOLD:
+            logger.debug(f"✅ High confidence semantic match: '{top_intent}'")
+            return top_intent, top_confidence
+        
+        # Validation zone: checa com keyword
+        if top_confidence >= 0.60:
+            keyword_intent, keyword_confidence = self._detect_intent_keyword_based(text_lower, doc)
+            
+            # Se keyword concorda, aceita
+            if keyword_intent == top_intent:
+                logger.debug(f"✅ Semantic + keyword agreement: '{top_intent}'")
+                # Boost na confiança por concordância
+                combined_confidence = min(1.0, (top_confidence + keyword_confidence) / 1.5)
+                return top_intent, combined_confidence
+            
+            # Se keyword discorda, usa o de maior confiança
+            if keyword_confidence > top_confidence:
+                logger.debug(f"⚠️ Keyword override: '{keyword_intent}' (kw={keyword_confidence:.3f} > sem={top_confidence:.3f})")
+                return keyword_intent, keyword_confidence
+            else:
+                logger.debug(f"⚠️ Semantic wins in validation zone: '{top_intent}'")
+                return top_intent, top_confidence
+        
+        # Low confidence: fallback para keyword
+        logger.debug(f"⚠️ Low semantic confidence ({top_confidence:.3f}), usando keyword fallback")
+        return self._detect_intent_keyword_based(text_lower, doc)
+    
+    def _detect_intent_keyword_based(self, text_lower: str, doc) -> Tuple[str, float]:
+        """
+        Detecta a intenção usando apenas keyword matching (método tradicional).
         
         Usa validação de entidades para desambiguar entre intenções similares:
         - Se encontrar um gênero válido, prioriza filmes_por_genero

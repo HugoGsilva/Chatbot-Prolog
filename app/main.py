@@ -144,7 +144,16 @@ async def lifespan(app: FastAPI):
     
     # 4.2 NLUEngine com SpellCorrector integrado
     nlu_engine = NLUEngine(spell_corrector=spell_corrector)
-    print("[Startup] NLUEngine inicializado com SpellCorrector integrado.")
+    print(f"[Startup] NLUEngine inicializado (semantic={'ATIVADO' if nlu_engine.use_semantic else 'DESATIVADO'}).")
+    
+    # 4.2.1 Warm-up do semantic classifier se ativado
+    if nlu_engine.use_semantic:
+        print("[Startup] Aquecendo semantic classifier...")
+        from .semantic_classifier import get_semantic_classifier
+        classifier = get_semantic_classifier()
+        # Faz uma classificação dummy para carregar modelo
+        _ = classifier.classify("teste de inicialização", top_k=1)
+        print("[Startup] ✅ Semantic classifier carregado e pronto.")
     
     # 4.3 IntentRouter
     intent_router = IntentRouter()

@@ -72,9 +72,12 @@ services:
         condition: service_healthy
     environment:
       - PYTHONUNBUFFERED=1
+      - USE_SEMANTIC_NLU=true  # Ativa modo semântico
     volumes:
       - ./app:/app/app
       - ./prolog:/app/prolog
+      - ./tests:/app/tests  # Monta testes
+      - ./scripts:/app/scripts  # Monta scripts
     ports:
       - "80:80"      # Frontend Angular
       - "8000:8000"  # Backend API

@@ -43,6 +43,12 @@ RUN pip install --upgrade pip && \
 # Instala modelo spaCy português para NLU
 RUN python -m spacy download pt_core_news_sm
 
+# Baixa modelo sentence-transformers (semantic NLU)
+# O modelo será baixado na primeira execução, mas podemos fazer cache aqui
+RUN python -c "from sentence_transformers import SentenceTransformer; \
+    model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2'); \
+    print('✅ Modelo semântico baixado com sucesso')"
+
 # ============================================
 # STAGE 3: Final - Backend + Frontend servido via Nginx
 # ============================================
